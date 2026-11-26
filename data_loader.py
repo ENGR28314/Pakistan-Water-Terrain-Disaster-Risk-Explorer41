@@ -1,0 +1,2460 @@
+"""
+data_loader.py
+Central data module for the Pakistan Water & Geography Explorer Streamlit app.
+All data is curated/summarized for an educational dashboard. Figures such as
+capacities, elevations and discharge should be verified against primary
+sources (WAPDA, IRSA, PMD, PDMA/NDMA) before use in any formal report.
+"""
+
+# ---------------------------------------------------------------------------
+# 1. PROVINCES
+# ---------------------------------------------------------------------------
+PROVINCES = {
+    "Gilgit-Baltistan": {
+        "capital": "Gilgit",
+        "area_km2": 72971,
+        "overview": (
+            "Mountainous northern territory containing the confluence of the "
+            "Karakoram, Himalaya and Hindu Kush ranges. Home to K2 and the "
+            "headwaters of the Indus, Gilgit, Hunza and Shyok rivers."
+        ),
+        "major_rivers": ["Indus River", "Gilgit River", "Hunza River", "Shyok River"],
+        "major_dams_barrages": ["Diamer-Bhasha Dam (under construction)"],
+        "climate_regions": ["Highland", "Arid (valley floors)"],
+        "mountain_ranges": ["Karakoram Range", "Himalayas Range (western edge)", "Hindu Kush Range"],
+        "key_lakes": ["Attabad Lake", "Satpara Lake", "Rush Lake", "Ghizer Lake"],
+    },
+    "Khyber Pakhtunkhwa (KPK)": {
+        "capital": "Peshawar",
+        "area_km2": 101741,
+        "overview": (
+            "Bridges the northern highlands and the Indus plains. Drained by "
+            "the Kabul and Swat rivers before they join the Indus near "
+            "Attock; contains Tarbela Dam, the country's largest earth-filled dam."
+        ),
+        "major_rivers": ["Kabul River", "Swat River", "Indus River"],
+        "major_dams_barrages": ["Tarbela Dam", "Warsak Dam", "Suki Kinari Hydropower Station"],
+        "climate_regions": ["Highland (north)", "Temperate", "Arid (south)"],
+        "mountain_ranges": ["Hindu Kush Range", "Hindu Raj Range", "Spin Ghar (Koh-e-Safed)"],
+        "key_lakes": ["Saif-ul-Malook Lake"],
+    },
+    "Punjab": {
+        "capital": "Lahore",
+        "area_km2": 205344,
+        "overview": (
+            "The agricultural heartland fed by the five rivers of the "
+            "Indus Basin Irrigation System (IBIS) — Indus, Jhelum, Chenab, "
+            "Ravi and Sutlej — linked by an extensive canal and barrage network."
+        ),
+        "major_rivers": ["Indus River", "Jhelum River", "Chenab River", "Ravi River", "Sutlej River"],
+        "major_dams_barrages": [
+            "Mangla Dam (partly AJK)", "Chashma Barrage", "Taunsa Barrage",
+            "Trimmu Barrage", "Rasul Barrage", "Panjnad Barrage", "Marala Headworks",
+        ],
+        "climate_regions": ["Arid", "Semi-arid/Temperate (north)"],
+        "mountain_ranges": ["Salt Range"],
+        "key_lakes": [],
+    },
+    "Sindh": {
+        "capital": "Karachi",
+        "area_km2": 140914,
+        "overview": (
+            "Lower riparian province where the Indus terminates in a delta on "
+            "the Arabian Sea. Heavily dependent on Sukkur, Guddu and Kotri "
+            "barrages; most exposed to sea intrusion and coastal salinization."
+        ),
+        "major_rivers": ["Indus River"],
+        "major_dams_barrages": ["Guddu Barrage", "Sukkur Barrage", "Kotri Barrage"],
+        "climate_regions": ["Arid", "Tropical (coastal belt)"],
+        "mountain_ranges": ["Kirthar Range"],
+        "key_lakes": ["Manchar Lake", "Keenjhar Lake", "Hub Dam Lake"],
+    },
+    "Balochistan": {
+        "capital": "Quetta",
+        "area_km2": 347190,
+        "overview": (
+            "Largest and most arid province, drained mostly by seasonal "
+            "hill-torrent systems (Zhob, Bolan, Hingol, Dasht) rather than "
+            "perennial rivers. Highly exposed to flash floods and drought."
+        ),
+        "major_rivers": ["Zhob River", "Bolan River", "Hingol River", "Dasht River"],
+        "major_dams_barrages": ["Hub Dam", "Mirani Dam", "Sabakzai Dam"],
+        "climate_regions": ["Arid", "Highland (Quetta plateau)"],
+        "mountain_ranges": ["Toba Kakar Range", "Sulaiman Mountains (Koh-e-Suleman)", "Kirthar Range (east)"],
+        "key_lakes": ["Hanna Lake"],
+    },
+    "Azad Jammu & Kashmir (AJK)": {
+        "capital": "Muzaffarabad",
+        "area_km2": 13297,
+        "overview": (
+            "Mountainous territory straddling the Jhelum River, downstream of "
+            "Indian-administered projects on the Chenab/Jhelum tributaries; "
+            "site of Mangla Dam and several run-of-river hydropower projects."
+        ),
+        "major_rivers": ["Jhelum River", "Neelum River", "Poonch River"],
+        "major_dams_barrages": ["Mangla Dam", "Kohala Hydropower Project", "Azad Pattan Hydropower Project", "Karot Hydropower Project"],
+        "climate_regions": ["Highland", "Temperate"],
+        "mountain_ranges": ["Himalayas Range (Pir Panjal foothills)"],
+        "key_lakes": ["Banjosa Lake"],
+    },
+    "Islamabad Capital Territory (ICT)": {
+        "capital": "Islamabad",
+        "area_km2": 906,
+        "overview": (
+            "Federal capital territory at the foot of the Margalla Hills, "
+            "fed by the Soan River and Rawal/Khanpur reservoirs for domestic water supply."
+        ),
+        "major_rivers": ["Soan River"],
+        "major_dams_barrages": ["Rawal Dam", "Khanpur Dam (KPK border)"],
+        "climate_regions": ["Temperate"],
+        "mountain_ranges": ["Margalla Hills (Himalayan foothills)"],
+        "key_lakes": ["Khanpur Lake"],
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 2. RIVERS
+# ---------------------------------------------------------------------------
+RIVERS = {
+    "Indus River": {
+        "length_km": 3180,
+        "source": "Tibetan Plateau, near Lake Mansarovar / Senge Khabab (enters Pakistan through GB)",
+        "upstream": "Enters Pakistan in Gilgit-Baltistan (Ladakh border) flowing through the Karakoram gorges.",
+        "downstream": "Flows through KPK, Punjab and Sindh to the Indus Delta, Arabian Sea near Karachi/Thatta.",
+        "confluences": [
+            "Kabul River (near Attock, KPK)",
+            "Panjnad River — combined Jhelum/Chenab/Ravi/Sutlej (near Mithankot, Punjab)",
+            "Gilgit & Hunza rivers (near Bunji, GB)",
+        ],
+        "provinces": ["Gilgit-Baltistan", "KPK", "Punjab", "Sindh"],
+        "dams_barrages": ["Diamer-Bhasha Dam (under construction)", "Dasu Hydropower Project", "Tarbela Dam", "Jinnah Barrage", "Chashma Barrage", "Taunsa Barrage", "Guddu Barrage", "Sukkur Barrage", "Kotri Barrage"],
+    },
+    "Jhelum River": {
+        "length_km": 725,
+        "source": "Verinag Spring, Indian-administered Kashmir",
+        "upstream": "Enters AJK near Muzaffarabad after flowing through the Kashmir Valley.",
+        "downstream": "Joins the Chenab River near Trimmu, Punjab.",
+        "confluences": ["Neelum River (Muzaffarabad)", "Chenab River (Trimmu, Punjab)"],
+        "provinces": ["AJK", "KPK", "Punjab"],
+        "dams_barrages": ["Mangla Dam", "Rasul Barrage", "Trimmu Barrage", "Kohala & Azad Pattan hydropower (run-of-river)"],
+    },
+    "Chenab River": {
+        "length_km": 960,
+        "source": "Himachal Pradesh, India (Chandra & Bhaga rivers)",
+        "upstream": "Enters Punjab at Marala, near Sialkot.",
+        "downstream": "Joins the Sutlej/Panjnad system near Uch Sharif, Punjab.",
+        "confluences": ["Jhelum River (Trimmu)", "Ravi River (Ahmadpur Sial)", "Sutlej (forming Panjnad)"],
+        "provinces": ["Punjab"],
+        "dams_barrages": ["Marala Barrage/Headworks", "Khanki Barrage", "Qadirabad Barrage", "Trimmu Barrage"],
+        "notes": "Focus of India–Pakistan hydro-political disputes (Baglihar, Pakal Dul, Ratle projects upstream).",
+    },
+    "Ravi River": {
+        "length_km": 720,
+        "source": "Himachal Pradesh, India",
+        "upstream": "Enters Punjab near Shahdara, Lahore.",
+        "downstream": "Joins the Chenab River near Ahmadpur Sial.",
+        "confluences": ["Chenab River"],
+        "provinces": ["Punjab"],
+        "dams_barrages": ["Balloki Barrage/Headworks", "Sidhnai Barrage"],
+    },
+    "Sutlej River": {
+        "length_km": 1450,
+        "source": "Rakshastal Lake, Tibet",
+        "upstream": "Enters Punjab near Sulemanki after flowing through Indian Punjab (largely dry in Pakistan post-Indus Waters Treaty apportionment).",
+        "downstream": "Joins the Panjnad/Chenab system near Bahawalpur.",
+        "confluences": ["Panjnad River"],
+        "provinces": ["Punjab"],
+        "dams_barrages": ["Sulemanki Barrage", "Islam Barrage", "Punjnad Barrage"],
+        "notes": "Allocated to India under the 1960 Indus Waters Treaty; flow in Pakistan is seasonal/residual.",
+    },
+    "Kabul River": {
+        "length_km": 700,
+        "source": "Sanglakh Range, Afghanistan (near Kabul)",
+        "upstream": "Enters KPK near Torkham/Warsak.",
+        "downstream": "Joins the Indus River near Attock.",
+        "confluences": ["Swat River (Charsadda)", "Indus River (Attock)"],
+        "provinces": ["KPK"],
+        "dams_barrages": ["Warsak Dam", "Nowshera Headworks"],
+    },
+    "Swat River": {
+        "length_km": 240,
+        "source": "Hindu Kush foothills, upper Swat valley",
+        "upstream": "Flows south through Kalam, Mingora.",
+        "downstream": "Joins the Kabul River near Charsadda.",
+        "confluences": ["Kabul River", "Panjkora River"],
+        "provinces": ["KPK"],
+        "dams_barrages": ["Mohmand Dam"],
+        "notes": "The Mohmand Dam project (near Munda) was formerly referred to regionally as the 'Munda Dam' site.",
+    },
+    "Gilgit River": {
+        "length_km": 240,
+        "source": "Shandur Pass area, GB",
+        "upstream": "Flows through Ghizer and Gilgit valleys.",
+        "downstream": "Joins the Indus River near Bunji.",
+        "confluences": ["Hunza River (near Gilgit town)", "Indus River (Bunji)"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Hunza River": {
+        "length_km": 190,
+        "source": "Glaciers of the Karakoram (Batura, Hispar)",
+        "upstream": "Flows through Hunza and Nagar valleys.",
+        "downstream": "Joins the Gilgit River near Gilgit town.",
+        "confluences": ["Gilgit River"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+        "notes": "Site of the 2010 Attabad Lake landslide-dam disaster.",
+    },
+    "Zhob River": {
+        "length_km": 320,
+        "source": "Toba Kakar Range, Balochistan",
+        "upstream": "Flows through Zhob district.",
+        "downstream": "Joins the Gomal River, then the Indus in southern KPK/Punjab border.",
+        "confluences": ["Gomal River", "Anambar River", "Loralai River"],
+        "provinces": ["Balochistan"],
+        "dams_barrages": ["Sabak Zai Dam"],
+    },
+    "Bolan River": {
+        "length_km": 200,
+        "source": "Central Brahui Range, Balochistan",
+        "upstream": "Flows through the Bolan Pass.",
+        "downstream": "Dissipates into the Kachhi plain (seasonal hill torrent).",
+        "confluences": ["Terminal/inland — does not reach the sea"],
+        "provinces": ["Balochistan"],
+        "dams_barrages": ["Bolan Dam"],
+    },
+    "Hingol River": {
+        "length_km": 560,
+        "source": "Central Balochistan highlands",
+        "upstream": "Flows through Hingol National Park.",
+        "downstream": "Empties into the Arabian Sea at Hingol delta.",
+        "confluences": ["Arabian Sea outfall"],
+        "provinces": ["Balochistan"],
+        "dams_barrages": [],
+    },
+    "Dasht River": {
+        "length_km": 400,
+        "source": "Central Makran highlands, Balochistan",
+        "upstream": "Flows through Kech/Turbat.",
+        "downstream": "Empties into the Arabian Sea near Gwadar.",
+        "confluences": ["Nihing River"],
+        "provinces": ["Balochistan"],
+        "dams_barrages": ["Mirani Dam"],
+    },
+    "Shyok River": {
+        "length_km": 550,
+        "source": "Rimo Glacier, Karakoram (Indian-administered Ladakh)",
+        "upstream": "Flows northwest through Ladakh, entering Pakistan-administered Baltistan near Khaplu.",
+        "downstream": "Joins the Indus River near Keris, Baltistan.",
+        "confluences": ["Indus River (near Keris, Baltistan)", "Saltoro River", "Hushe River"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+        "notes": "Mostly flows through Indian-administered Ladakh before entering Pakistan-administered Baltistan near Khaplu.",
+    },
+    "Shigar River": {
+        "length_km": 88,
+        "source": "Confluence of the Braldu and Basha rivers below the Baltoro/Karakoram glaciers",
+        "upstream": "Flows south through the Shigar Valley.",
+        "downstream": "Joins the Indus River near Skardu.",
+        "confluences": ["Indus River (near Skardu)", "Braldu River"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Kurram River": {
+        "length_km": 320,
+        "source": "Highlands of the Kurram district near the Afghanistan border (Paktia province)",
+        "upstream": "Flows southeast through Kurram district, Khyber Pakhtunkhwa.",
+        "downstream": "Joins the Indus River near Isa Khel, Mianwali district, Punjab.",
+        "confluences": ["Indus River (near Mianwali, Punjab)", "Tochi River"],
+        "provinces": ["KPK", "Punjab"],
+        "dams_barrages": ["Kurram Tangi Dam Project"],
+    },
+    "Gomal River": {
+        "length_km": 400,
+        "source": "Sulaiman Range near the Afghanistan border (Paktika province)",
+        "upstream": "Flows southeast through South Waziristan.",
+        "downstream": "Joins the Indus River near Dera Ismail Khan.",
+        "confluences": ["Indus River (near D.I. Khan)"],
+        "provinces": ["KPK"],
+        "dams_barrages": [],
+    },
+    "Nelum River": {
+        "length_km": 245,
+        "source": "Dras/Kishanganga basin near Kargil, Indian-administered Kashmir",
+        "upstream": "Flows through the Neelum Valley, Azad Jammu & Kashmir.",
+        "downstream": "Joins the Jhelum River at Muzaffarabad.",
+        "confluences": ["Jhelum River (Muzaffarabad)"],
+        "provinces": ["AJK"],
+        "dams_barrages": ["Neelum-Jhelum Hydropower Project"],
+        "notes": "Historically known as the Kishanganga River in its Indian-administered upper reaches; site of the Kishanganga hydropower dispute under the Indus Waters Treaty.",
+    },
+    "Poonch River": {
+        "length_km": 240,
+        "source": "Pir Panjal range, Indian-administered Kashmir",
+        "upstream": "Flows through the Poonch and Kotli districts, Azad Jammu & Kashmir.",
+        "downstream": "Joins the Jhelum River near Mangla Reservoir.",
+        "confluences": ["Jhelum River (near Mangla)"],
+        "provinces": ["AJK", "Punjab"],
+        "dams_barrages": [],
+    },
+    "Punjnad River": {
+        "length_km": 72,
+        "source": "Formed by the confluence of the Sutlej and Chenab rivers near Uch Sharif, Punjab",
+        "upstream": "Begins near Uch Sharif, Bahawalpur district.",
+        "downstream": "Joins the Indus River at Mithankot.",
+        "confluences": ["Sutlej River & Chenab River (Uch Sharif — forms the Panjnad)", "Indus River (Mithankot)"],
+        "provinces": ["Punjab"],
+        "dams_barrages": ["Panjnad Barrage"],
+        "notes": "'Panjnad' means 'five waters' — the combined flow of the Jhelum, Chenab, Ravi, Sutlej and (historically) Beas rivers before joining the Indus.",
+    },
+    "Hub River": {
+        "length_km": 190,
+        "source": "Khirthar Range foothills, Balochistan",
+        "upstream": "Flows along the Sindh–Balochistan border.",
+        "downstream": "Empties into the Arabian Sea near Hub, west of Karachi.",
+        "confluences": ["Arabian Sea outfall"],
+        "provinces": ["Sindh", "Balochistan"],
+        "dams_barrages": ["Hub Dam"],
+    },
+    "Soan River": {
+        "length_km": 190,
+        "source": "Murree Hills, Punjab",
+        "upstream": "Flows through Rawalpindi and Islamabad across the Potohar Plateau.",
+        "downstream": "Joins the Indus River near Kalabagh.",
+        "confluences": ["Indus River (near Kalabagh)", "Korang River"],
+        "provinces": ["Punjab", "ICT"],
+        "dams_barrages": [],
+    },
+    "Haro River": {
+        "length_km": 160,
+        "source": "Murree Hills near the Abbottabad border",
+        "upstream": "Flows through Khanpur and Taxila.",
+        "downstream": "Joins the Indus River near Attock (Ghazi).",
+        "confluences": ["Indus River (near Attock)"],
+        "provinces": ["Punjab", "KPK"],
+        "dams_barrages": ["Khanpur Dam"],
+    },
+    "Korang River": {
+        "length_km": 40,
+        "source": "Margalla Hills, Islamabad",
+        "upstream": "Flows through Islamabad, forming Rawal Lake.",
+        "downstream": "Joins the Soan River.",
+        "confluences": ["Soan River"],
+        "provinces": ["ICT"],
+        "dams_barrages": ["Rawal Dam"],
+    },
+    "Mula River": {
+        "length_km": 240,
+        "source": "Central Brahui Range, Kalat district, Balochistan",
+        "upstream": "Flows through Khuzdar district.",
+        "downstream": "Dissipates toward the Kachhi plain.",
+        "confluences": ["Kachhi plain (seasonal/terminal)"],
+        "provinces": ["Balochistan"],
+        "dams_barrages": ["Mula Dam", "Naulong Storage Dam"],
+    },
+    "Gaj River": {
+        "length_km": 130,
+        "source": "Khirthar Range, Dadu district, Sindh",
+        "upstream": "Flows southeast through the Khirthar hills.",
+        "downstream": "Joins the Indus River floodplain near Johi, Sindh.",
+        "confluences": ["Indus River floodplain (near Johi)"],
+        "provinces": ["Sindh"],
+        "dams_barrages": ["Nai Gaj Dam"],
+    },
+    "Kunhar River": {
+        "length_km": 166,
+        "source": "Lulusar Lake, Kaghan Valley, KPK",
+        "upstream": "Flows south through Kaghan and Balakot.",
+        "downstream": "Joins the Jhelum River near Muzaffarabad.",
+        "confluences": ["Jhelum River (near Muzaffarabad)"],
+        "provinces": ["KPK"],
+        "dams_barrages": ["Suki Kinari Hydropower Station"],
+    },
+    "Tawi River": {
+        "length_km": 160,
+        "source": "Kailash Range, Indian-administered Jammu",
+        "upstream": "Flows through Jammu into the Sialkot district, Punjab.",
+        "downstream": "Joins the Chenab River near Sialkot.",
+        "confluences": ["Chenab River (near Sialkot)"],
+        "provinces": ["Punjab"],
+        "dams_barrages": [],
+    },
+    "Manawar Tawi River": {
+        "length_km": 95,
+        "source": "Jammu hills, Indian-administered Kashmir",
+        "upstream": "Flows into the Shakargarh area, Punjab.",
+        "downstream": "Joins the Chenab River system near Shakargarh.",
+        "confluences": ["Chenab River system (Shakargarh area)"],
+        "provinces": ["Punjab"],
+        "dams_barrages": [],
+    },
+    "Tochi River (Gambila River)": {
+        "length_km": 240,
+        "source": "Khost province, Afghanistan",
+        "upstream": "Flows southeast through North Waziristan.",
+        "downstream": "Joins the Kurram River near Bannu.",
+        "confluences": ["Kurram River (near Bannu)"],
+        "provinces": ["KPK"],
+        "dams_barrages": [],
+    },
+    "Chitral River (Kunar River)": {
+        "length_km": 320,
+        "source": "Glaciers near the Chiantar/Terich Mir massif, upper Chitral",
+        "upstream": "Flows south through Chitral town.",
+        "downstream": "Crosses into Afghanistan as the Kunar River, later rejoining the Kabul River.",
+        "confluences": ["Lutkho River (near Chitral town)", "Kabul River (in Afghanistan, downstream)"],
+        "provinces": ["KPK"],
+        "dams_barrages": [],
+        "notes": "Known as the Kunar River after it crosses into Afghanistan.",
+    },
+    "River Jindi (Kot & Manzari Baba)": {
+        "length_km": 25,
+        "source": "Hazara hill tracts near Kot and Manzari Baba, Mansehra district",
+        "upstream": "Flows through the Kot/Manzari Baba area of Hazara.",
+        "downstream": "Feeds the local stream network toward the Siran/Indus system.",
+        "confluences": ["Siran River system"],
+        "provinces": ["KPK"],
+        "dams_barrages": [],
+        "notes": "A minor local hill stream; limited published survey data — included as a local hydrography reference point.",
+    },
+    "Panjkora River": {
+        "length_km": 193,
+        "source": "Hindu Kush, upper Dir",
+        "upstream": "Flows south through Upper and Lower Dir.",
+        "downstream": "Joins the Swat River near Chakdara.",
+        "confluences": ["Swat River (near Chakdara)"],
+        "provinces": ["KPK"],
+        "dams_barrages": [],
+    },
+    "Bara River": {
+        "length_km": 110,
+        "source": "Khyber Agency hills",
+        "upstream": "Flows through the Bara/Khyber area.",
+        "downstream": "Joins the Kabul River near Peshawar.",
+        "confluences": ["Kabul River (near Peshawar)"],
+        "provinces": ["KPK"],
+        "dams_barrages": [],
+    },
+    "Lutkho River (Garam Chashma River)": {
+        "length_km": 72,
+        "source": "Dorah Pass area, Hindu Kush, near the Afghan border",
+        "upstream": "Flows through Garam Chashma, Chitral.",
+        "downstream": "Joins the Chitral River near Chitral town.",
+        "confluences": ["Chitral River (near Chitral town)"],
+        "provinces": ["KPK"],
+        "dams_barrages": [],
+    },
+    "Siran River (Sirin River)": {
+        "length_km": 135,
+        "source": "Kaghan foothills near Abbottabad/Mansehra",
+        "upstream": "Flows through Mansehra district.",
+        "downstream": "Joins the Indus River / Tarbela Reservoir near Ghazi.",
+        "confluences": ["Indus River / Tarbela Reservoir (near Ghazi)", "River Jindi"],
+        "provinces": ["KPK"],
+        "dams_barrages": [],
+    },
+    "Tangir River": {
+        "length_km": 97,
+        "source": "Tangir Valley glaciers, Diamer district, Gilgit-Baltistan",
+        "upstream": "Flows south through the Tangir valley.",
+        "downstream": "Joins the Indus River near Chilas.",
+        "confluences": ["Indus River (near Chilas)"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Astore River": {
+        "length_km": 124,
+        "source": "Deosai Plains and Nanga Parbat glaciers",
+        "upstream": "Flows north through the Astore valley.",
+        "downstream": "Joins the Indus River near Jaglot.",
+        "confluences": ["Indus River (near Jaglot)", "Rupal River"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Rupal River": {
+        "length_km": 48,
+        "source": "Rupal Face glaciers, Nanga Parbat",
+        "upstream": "Flows through the Rupal/Tarashing valley.",
+        "downstream": "Joins the Astore River.",
+        "confluences": ["Astore River"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Naltar River": {
+        "length_km": 40,
+        "source": "Naltar Valley glaciers, Gilgit district",
+        "upstream": "Flows south through the Naltar valley.",
+        "downstream": "Joins the Hunza River near Nomal.",
+        "confluences": ["Hunza River (near Nomal)"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Hispar River": {
+        "length_km": 53,
+        "source": "Hispar Glacier, Karakoram",
+        "upstream": "Flows through the Hispar valley, Nagar.",
+        "downstream": "Joins the Hunza River near Nagar.",
+        "confluences": ["Hunza River (near Nagar)"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Shimshal River (Shingshal River)": {
+        "length_km": 97,
+        "source": "Shimshal glaciers near the China border, Karakoram",
+        "upstream": "Flows through the Shimshal valley.",
+        "downstream": "Joins the Hunza River near Passu.",
+        "confluences": ["Hunza River (near Passu)"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Chapursan River": {
+        "length_km": 60,
+        "source": "Chapursan Valley glaciers near the Afghan Wakhan border",
+        "upstream": "Flows southeast through the Chapursan valley.",
+        "downstream": "Joins the Hunza River near Sost.",
+        "confluences": ["Hunza River (near Sost)", "Misga River"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Misga River": {
+        "length_km": 30,
+        "source": "Misgar/Khunjerab watershed, upper Hunza",
+        "upstream": "Flows through the Misgar valley.",
+        "downstream": "Joins the Chapursan River.",
+        "confluences": ["Chapursan River"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Khunjerab River": {
+        "length_km": 45,
+        "source": "Khunjerab Pass glaciers, Pakistan-China border",
+        "upstream": "Flows southwest through Khunjerab National Park.",
+        "downstream": "Joins the Hunza River near Sost.",
+        "confluences": ["Hunza River (near Sost)"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Ishkumhan River": {
+        "length_km": 72,
+        "source": "Karambar Lake and glaciers, Ghizer district",
+        "upstream": "Flows south through the Ishkoman valley.",
+        "downstream": "Joins the Gilgit River near Gupis.",
+        "confluences": ["Gilgit River (near Gupis)"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+        "notes": "Also spelled Ishkoman River.",
+    },
+    "Yasin River": {
+        "length_km": 64,
+        "source": "Thui glaciers, Yasin valley, Ghizer district",
+        "upstream": "Flows south through the Yasin valley.",
+        "downstream": "Joins the Gilgit River near the Ishkoman confluence.",
+        "confluences": ["Gilgit River (near Gupis)"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Satpara Stream (Satpar Cho)": {
+        "length_km": 19,
+        "source": "Satpara and Deosai glaciers, Baltistan",
+        "upstream": "Flows north, feeding Satpara Lake.",
+        "downstream": "Joins the Indus River near Skardu.",
+        "confluences": ["Indus River (near Skardu)"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": ["Satpara Dam"],
+    },
+    "Braldu River": {
+        "length_km": 65,
+        "source": "Baltoro Glacier, Karakoram",
+        "upstream": "Flows southwest through the Baltoro/Askole area.",
+        "downstream": "Joins the Shigar River.",
+        "confluences": ["Shigar River"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Saltoro River": {
+        "length_km": 50,
+        "source": "Saltoro Range glaciers near the Siachen area",
+        "upstream": "Flows south toward Baltistan.",
+        "downstream": "Joins the Shyok River.",
+        "confluences": ["Shyok River"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Hushe River": {
+        "length_km": 50,
+        "source": "Masherbrum/Gondogoro glaciers, Hushe valley",
+        "upstream": "Flows through the Hushe/Khaplu area.",
+        "downstream": "Joins the Shyok River near Khaplu.",
+        "confluences": ["Shyok River (near Khaplu)"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Shingo River": {
+        "length_km": 90,
+        "source": "Deosai Plains, Kharmang district",
+        "upstream": "Flows east through Kharmang.",
+        "downstream": "Joins the Indus River near Kharmang.",
+        "confluences": ["Indus River (near Kharmang)"],
+        "provinces": ["Gilgit-Baltistan"],
+        "dams_barrages": [],
+    },
+    "Rakshan River": {
+        "length_km": 240,
+        "source": "Central Makran/Siahan Range, Kharan district, Balochistan",
+        "upstream": "Flows through Kharan district.",
+        "downstream": "Drains into the inland Hamun-i-Mashkel basin.",
+        "confluences": ["Terminal — inland Hamun-i-Mashkel basin"],
+        "provinces": ["Balochistan"],
+        "dams_barrages": [],
+        "notes": "Part of Balochistan's endorheic (closed) drainage system, separate from the Indus basin.",
+    },
+    "Beji River": {
+        "length_km": 110,
+        "source": "Central Brahui Range, Khuzdar district, Balochistan",
+        "upstream": "Flows through Khuzdar district.",
+        "downstream": "Joins the Porali River drainage toward the Arabian Sea coast.",
+        "confluences": ["Porali River system"],
+        "provinces": ["Balochistan"],
+        "dams_barrages": [],
+    },
+    "Anambar River": {
+        "length_km": 240,
+        "source": "Zarghoon/Ziarat hills, Balochistan",
+        "upstream": "Flows through Loralai district.",
+        "downstream": "Joins the Zhob River system.",
+        "confluences": ["Zhob River"],
+        "provinces": ["Balochistan"],
+        "dams_barrages": [],
+    },
+    "Loralai River": {
+        "length_km": 130,
+        "source": "Central Brahui Range near Loralai",
+        "upstream": "Flows through Loralai district.",
+        "downstream": "Joins the Anambar River.",
+        "confluences": ["Anambar River"],
+        "provinces": ["Balochistan"],
+        "dams_barrages": [],
+    },
+    "Loe Manda River": {
+        "length_km": 70,
+        "source": "Zhob district hills, Balochistan",
+        "upstream": "Flows through the Loe Manda area.",
+        "downstream": "Joins the Zhob/Gomal river system.",
+        "confluences": ["Zhob River system"],
+        "provinces": ["Balochistan"],
+        "dams_barrages": [],
+        "notes": "A minor local hill tributary; limited published survey data.",
+    },
+    "Hakra River": {
+        "length_km": 466,
+        "source": "Continuation of the Ghaggar River from Indian Punjab/Haryana into the Cholistan Desert",
+        "upstream": "Enters Pakistan near Fort Abbas, Punjab, as a largely dry/seasonal paleochannel.",
+        "downstream": "Historically dissipated into the Cholistan desert (the Hakra valley).",
+        "confluences": ["Terminal — Cholistan Desert (seasonal/historical course)"],
+        "provinces": ["Punjab"],
+        "dams_barrages": [],
+        "notes": "Now mostly a dry paleochannel, believed to be an ancient course of the Sutlej/Beas system; associated with Indus Valley Civilisation 'Hakra Ware' sites and often linked to the ancient 'Saraswati' river debate.",
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 3. DAMS & BARRAGES (detail table)
+# ---------------------------------------------------------------------------
+DAMS_BARRAGES = {
+    "Tarbela Dam": {"type": "Earth-filled dam", "river": "Indus River", "province": "KPK",
+                    "year_completed": 1976, "capacity_MW": 4888, "purpose": "Irrigation storage & hydropower"},
+    "Mangla Dam": {"type": "Embankment dam", "river": "Jhelum River", "province": "AJK/Punjab",
+                   "year_completed": 1967, "capacity_MW": 1310, "purpose": "Irrigation storage & hydropower"},
+    "Diamer-Bhasha Dam": {"type": "Concrete-face rock-fill dam (under construction)", "river": "Indus River",
+                          "province": "GB/KPK border", "year_completed": "2029-31 (planned)",
+                          "capacity_MW": 4500, "purpose": "Irrigation storage, hydropower & flood control"},
+    "Warsak Dam": {"type": "Gravity dam", "river": "Kabul River", "province": "KPK",
+                   "year_completed": 1960, "capacity_MW": 243, "purpose": "Hydropower & irrigation"},
+    "Chashma Barrage": {"type": "Barrage", "river": "Indus River", "province": "Punjab",
+                        "year_completed": 1971, "capacity_MW": None, "purpose": "Irrigation diversion"},
+    "Taunsa Barrage": {"type": "Barrage", "river": "Indus River", "province": "Punjab",
+                       "year_completed": 1958, "capacity_MW": None, "purpose": "Irrigation diversion"},
+    "Guddu Barrage": {"type": "Barrage", "river": "Indus River", "province": "Sindh",
+                      "year_completed": 1962, "capacity_MW": None, "purpose": "Irrigation diversion"},
+    "Sukkur Barrage": {"type": "Barrage", "river": "Indus River", "province": "Sindh",
+                       "year_completed": 1932, "capacity_MW": None, "purpose": "Irrigation diversion (world's largest irrigation network anchor)"},
+    "Kotri Barrage": {"type": "Barrage", "river": "Indus River", "province": "Sindh",
+                      "year_completed": 1955, "capacity_MW": None, "purpose": "Irrigation diversion & downstream/delta flow releases"},
+    "Karot Hydropower Project": {"type": "Run-of-river hydropower (CPEC)", "river": "Jhelum River",
+                                  "province": "Punjab/AJK", "year_completed": 2022, "capacity_MW": 720,
+                                  "purpose": "Hydropower — Chinese IPP investment"},
+    "Suki Kinari Hydropower Station": {"type": "Run-of-river hydropower (CPEC)", "river": "Kunhar River",
+                                        "province": "KPK", "year_completed": 2024, "capacity_MW": 884,
+                                        "purpose": "Hydropower — Chinese IPP investment"},
+    "Kohala Hydropower Project": {"type": "Run-of-river hydropower (CPEC, under development)", "river": "Jhelum River",
+                                   "province": "KPK/AJK", "year_completed": "2026-27 (planned)", "capacity_MW": 1124,
+                                   "purpose": "Hydropower — Chinese IPP investment"},
+    "Azad Pattan Hydropower Project": {"type": "Run-of-river hydropower (CPEC, under development)", "river": "Jhelum River",
+                                        "province": "AJK", "year_completed": "2027 (planned)", "capacity_MW": 700.7,
+                                        "purpose": "Hydropower — Chinese IPP investment"},
+    "Dasu Hydropower Project": {"type": "Run-of-river hydropower (under construction)", "river": "Indus River",
+                                 "province": "KPK", "year_completed": "2028-29 (planned, stage 1)",
+                                 "capacity_MW": 4320, "purpose": "Hydropower"},
+    "Mohmand Dam": {"type": "Concrete-face rock-fill dam (under construction)", "river": "Swat River",
+                    "province": "KPK", "year_completed": "2026-27 (planned)",
+                    "capacity_MW": 800, "purpose": "Hydropower, irrigation & flood control (Peshawar flood protection)"},
+    "Kurram Tangi Dam Project": {"type": "Multipurpose dam (under construction)", "river": "Kurram River",
+                                 "province": "KPK", "year_completed": "Phased (ongoing)",
+                                 "capacity_MW": 83.4, "purpose": "Irrigation, hydropower & flood control"},
+    "Nai Gaj Dam": {"type": "Multipurpose dam (under construction)", "river": "Gaj River",
+                    "province": "Sindh", "year_completed": "Ongoing",
+                    "capacity_MW": 4.2, "purpose": "Irrigation & flood control"},
+    "Naulong Storage Dam": {"type": "Storage dam (under construction)", "river": "Mula River",
+                            "province": "Balochistan", "year_completed": "Ongoing",
+                            "capacity_MW": None, "purpose": "Irrigation & flood control"},
+    "Sabak Zai Dam": {"type": "Storage dam", "river": "Zhob River",
+                      "province": "Balochistan", "year_completed": 2007,
+                      "capacity_MW": None, "purpose": "Irrigation"},
+    "Punjnad Barrage": {"type": "Barrage", "river": "Panjnad River", "province": "Punjab",
+                        "year_completed": 1932, "capacity_MW": None, "purpose": "Irrigation diversion"},
+    "Islam Barrage": {"type": "Barrage", "river": "Sutlej River", "province": "Punjab",
+                      "year_completed": 1927, "capacity_MW": None, "purpose": "Irrigation diversion"},
+    "Sulemanki Barrage": {"type": "Barrage", "river": "Sutlej River", "province": "Punjab",
+                          "year_completed": 1926, "capacity_MW": None, "purpose": "Irrigation diversion"},
+    "Sidhnai Barrage": {"type": "Barrage", "river": "Ravi River", "province": "Punjab",
+                        "year_completed": 1886, "capacity_MW": None, "purpose": "Irrigation diversion"},
+    "Balloki Barrage/Headworks": {"type": "Barrage/Headworks", "river": "Ravi River", "province": "Punjab",
+                                  "year_completed": 1913, "capacity_MW": None, "purpose": "Irrigation diversion"},
+    "Trimmu Barrage": {"type": "Barrage", "river": "Chenab River", "province": "Punjab",
+                       "year_completed": 1939, "capacity_MW": None, "purpose": "Irrigation diversion & Jhelum-Chenab confluence control"},
+    "Qadirabad Barrage": {"type": "Barrage", "river": "Chenab River", "province": "Punjab",
+                          "year_completed": 1967, "capacity_MW": None, "purpose": "Irrigation diversion"},
+    "Khanki Barrage": {"type": "Barrage", "river": "Chenab River", "province": "Punjab",
+                       "year_completed": 1892, "capacity_MW": None, "purpose": "Irrigation diversion"},
+    "Marala Barrage/Headworks": {"type": "Barrage/Headworks", "river": "Chenab River", "province": "Punjab",
+                                 "year_completed": 1968, "capacity_MW": None,
+                                 "purpose": "Irrigation diversion — Chenab River's entry point into Pakistan, feeds the Marala-Ravi Link Canal"},
+    "Rasul Barrage": {"type": "Barrage", "river": "Jhelum River", "province": "Punjab",
+                      "year_completed": 1967, "capacity_MW": None, "purpose": "Irrigation diversion"},
+    "Jinnah Barrage": {"type": "Barrage", "river": "Indus River", "province": "Punjab",
+                       "year_completed": 1946, "capacity_MW": None, "purpose": "Irrigation diversion (feeds the Thal Canal, near Kalabagh)"},
+    "Nowshera Headworks": {"type": "Headworks", "river": "Kabul River", "province": "KPK",
+                           "year_completed": 1914, "capacity_MW": None, "purpose": "Irrigation diversion"},
+}
+
+# ---------------------------------------------------------------------------
+# 4. LINK CANALS (Indus Basin Irrigation System)
+# ---------------------------------------------------------------------------
+LINK_CANALS = {
+    "Chashma-Jhelum (C-J) Link Canal": {"connects": "Indus (Chashma) → Jhelum (Trimmu)", "province": "Punjab",
+                                         "purpose": "Transfers surplus Indus water to the Jhelum/Chenab system to compensate Ravi/Sutlej users after IWT."},
+    "Taunsa-Panjnad (T-P) Link Canal": {"connects": "Indus (Taunsa) → Panjnad", "province": "Punjab",
+                                         "purpose": "Supplements Sutlej-zone irrigation supplies."},
+    "Trimmu-Sidhnai (T-S) Link Canal": {"connects": "Chenab (Trimmu) → Ravi (Sidhnai)", "province": "Punjab",
+                                         "purpose": "Feeds central Punjab (Ravi zone) canal commands."},
+    "Sidhnai-Mailsi-Bahawal (SMB) Link Canal": {"connects": "Ravi (Sidhnai) → Sutlej (Bahawal)", "province": "Punjab",
+                                                 "purpose": "Extends Ravi water into the Sutlej command area."},
+    "Mailsi-Bahawal (MB) Link Canal": {"connects": "Continuation of SMB system", "province": "Punjab",
+                                        "purpose": "Feeds Bahawalpur-zone irrigation."},
+    "Rasul-Qadirabad (R-Q) Link Canal": {"connects": "Jhelum (Rasul) → Chenab (Qadirabad)", "province": "Punjab",
+                                          "purpose": "Balances Jhelum surplus into the Chenab system."},
+    "Qadirabad-Balloki (Q-B) Link Canal": {"connects": "Chenab (Qadirabad) → Ravi (Balloki)", "province": "Punjab",
+                                            "purpose": "Feeds the Ravi command after the river's flows were reduced post-IWT."},
+    "Balloki-Sulemanki (B-S) Link Canal": {"connects": "Ravi (Balloki) → Sutlej (Sulemanki)", "province": "Punjab",
+                                            "purpose": "Reinforces the Sutlej zone with Ravi/Chenab water."},
+}
+
+# ---------------------------------------------------------------------------
+# 5. CLIMATIC REGIONS
+# ---------------------------------------------------------------------------
+CLIMATIC_REGIONS = {
+    "Temperate": {
+        "areas": ["Northern KPK valleys", "Islamabad/Margalla foothills", "AJK mid-elevations"],
+        "characteristics": "Four distinct seasons, moderate rainfall, monsoon influence in summer, cold winters with occasional snow at higher elevations.",
+    },
+    "Tropical": {
+        "areas": ["Coastal Sindh/Karachi belt"],
+        "characteristics": "Warm and humid year-round, moderated by the Arabian Sea, monsoon-dependent rainfall, vulnerable to cyclones and sea intrusion.",
+    },
+    "Polar": {
+        "areas": ["High-altitude Karakoram/Himalaya glaciated zones above ~5000 m"],
+        "characteristics": "Permanent snow and ice cover, extreme cold, the source zone for glacier-fed rivers and the location of most GLOF hazard.",
+    },
+    "Arid": {
+        "areas": ["Most of Balochistan", "Southern Punjab", "Sindh interior", "Thar Desert"],
+        "characteristics": "Very low and erratic rainfall, high evapotranspiration, heavy reliance on irrigation, drought-prone.",
+    },
+    "Highland": {
+        "areas": ["Gilgit-Baltistan valleys", "Quetta plateau", "Northern KPK mountains"],
+        "characteristics": "Cold semi-arid to alpine conditions, large diurnal temperature range, snowmelt-dependent hydrology.",
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 6. MOUNTAIN RANGES
+# ---------------------------------------------------------------------------
+MOUNTAIN_RANGES = {
+    "Northern Highlands and Major Ranges": {
+        "Karakoram Range": {
+            "highest_peak": "K2 (Mount Godwin-Austen), 8,611 m — 2nd highest peak on Earth",
+            "other_notable_peaks": [
+                {"name": "Gasherbrum I (Hidden Peak)", "elevation_m": 8080},
+                {"name": "Broad Peak", "elevation_m": 8051},
+                {"name": "Gasherbrum II", "elevation_m": 8035},
+                {"name": "Masherbrum", "elevation_m": 7821},
+                {"name": "Rakaposhi", "elevation_m": 7788},
+                {"name": "Batura Sar", "elevation_m": 7795},
+            ],
+            "surrounding_areas": "Gilgit-Baltistan (Baltistan, Hunza, Shigar, Skardu)",
+            "climbing_details": (
+                "K2 is climbed mainly via the Abruzzi Spur (Southeast Ridge) from Concordia, "
+                "reached by a multi-day trek up the Baltoro Glacier; the Cesen and North Ridge "
+                "routes are used less often. K2 is considered far more technical and dangerous "
+                "than Everest — steep ice and rock climbing, frequent avalanches on the "
+                "'Bottleneck' serac traverse near the summit, and a historically high "
+                "fatality-to-summit ratio have earned it the nickname 'Savage Mountain'. "
+                "It was first summited in 1954 by an Italian expedition (Lino Lacedelli and "
+                "Achille Compagnoni) and was first climbed in winter only in January 2021, by a "
+                "Nepali team."
+            ),
+            "best_climbing_season": "Late June to August (summer expedition window); winter ascents attempted rarely, Dec-Feb.",
+            "permits_required": "Mountaineering/trekking permit from the Gilgit-Baltistan tourism authorities and Pakistan's Alpine Club; peak fee scaled to expedition size for 8,000 m peaks.",
+            "access_towns": ["Skardu", "Askole (last road-head village)"],
+            "trekking_routes": ["Askole → Baltoro Glacier → Concordia → K2 Base Camp", "Concordia → Gondogoro La → Hushe valley"],
+            "hazards": "Serac/avalanche fall on upper routes, sudden weather changes, rockfall in the Baltoro approach, altitude illness.",
+            "geology": "Young, tectonically active granite/gneiss massif formed by the ongoing India-Asia collision; one of the most heavily glaciated areas outside the polar regions, often called the 'Third Pole' — the Baltoro and Biafo glaciers are among the longest outside the poles.",
+            "tourist_guide": (
+                "The Baltoro Glacier trek to Concordia (the 'throne room of the mountain gods', "
+                "ringed by four of the world's 8,000 m peaks) is one of the most spectacular "
+                "trekking routes on Earth. Nearby highlights include the granite spires of the "
+                "Trango Towers (a world-class big-wall climbing destination), the alpine Deosai "
+                "Plateau (accessed via Skardu, home to the Himalayan brown bear), and Shigar Fort "
+                "for cultural heritage."
+            ),
+            "rivers": ["Indus River (headwaters)", "Shyok River", "Hunza River", "Shigar River"],
+        },
+        "Himalayas Range": {
+            "highest_peak": "Nanga Parbat, 8,126 m — westernmost 8000er, 9th highest in the world",
+            "other_notable_peaks": [
+                {"name": "Rakhiot Peak", "elevation_m": 7070},
+                {"name": "Laila Peak (Gasherbrum group)", "elevation_m": 6096},
+                {"name": "Malika Parbat", "elevation_m": 5290},
+            ],
+            "surrounding_areas": "Gilgit-Baltistan (Diamer district), AJK, extending east into Indian-administered Kashmir and northern India",
+            "climbing_details": (
+                "Nanga Parbat, nicknamed 'Killer Mountain' after a string of early-20th-century "
+                "fatalities (notably the 1934 and 1937 German expeditions), is typically climbed "
+                "via the Kinshofer route on the Diamir Face; the Rupal Face on the southern side "
+                "is one of the tallest mountain faces in the world (~4,600 m of relief). First "
+                "summited in 1953 by Hermann Buhl, solo on the final push."
+            ),
+            "best_climbing_season": "June to August for the standard season; a small number of winter ascents have succeeded since 2016.",
+            "permits_required": "Mountaineering permit from the Gilgit-Baltistan tourism department / Alpine Club of Pakistan.",
+            "access_towns": ["Chilas", "Raikot Bridge (road-head for Fairy Meadows)"],
+            "trekking_routes": ["Raikot Bridge → Fairy Meadows → Nanga Parbat Base Camp", "Rupal valley trek to the Rupal Face"],
+            "hazards": "Rockfall and avalanche on the Diamir Face, extreme relief on the Rupal Face, rapid weather deterioration.",
+            "geology": "One of the fastest-uplifting massifs on Earth, sitting at the western syntaxis where the Himalayan collision zone bends sharply northward around the Indus gorge — a site of intense erosion-uplift feedback studied globally by geologists.",
+            "tourist_guide": (
+                "Fairy Meadows, a lush alpine meadow with a classic postcard view of Nanga "
+                "Parbat's Diamir Face, is reachable by jeep and a short trek from Raikot Bridge "
+                "and is one of Pakistan's most-visited mountain viewpoints. The Astor valley "
+                "offers further trekking and traditional villages."
+            ),
+            "rivers": ["Indus River", "Jhelum River (headwaters area)", "Neelum River"],
+        },
+        "Hindu Kush Range": {
+            "highest_peak": "Tirich Mir, 7,708 m — highest peak of the Hindu Kush",
+            "other_notable_peaks": [
+                {"name": "Noshaq (mostly in Afghanistan, visible from Chitral)", "elevation_m": 7492},
+                {"name": "Istor-o-Nal", "elevation_m": 7403},
+                {"name": "Saraghrar", "elevation_m": 7349},
+            ],
+            "surrounding_areas": "Chitral district, KPK, bordering Afghanistan's Wakhan Corridor and Nuristan/Badakhshan",
+            "climbing_details": (
+                "Tirich Mir was first climbed in 1950 by a Norwegian expedition (Arne Naess); "
+                "routes are approached via the Tirich Gol valley from Chitral town. Less "
+                "commercially guided than the Karakoram 8,000ers, drawing smaller expeditions."
+            ),
+            "best_climbing_season": "July to early September.",
+            "permits_required": "Mountaineering permit via the Alpine Club of Pakistan; border-zone travel permits for areas near Afghanistan.",
+            "access_towns": ["Chitral town", "Shagrom (Tirich Gol trailhead)"],
+            "trekking_routes": ["Chitral → Tirich Gol valley → Tirich Mir base camp", "Chitral → Kalash valleys circuit"],
+            "hazards": "Remote/limited rescue infrastructure, border-proximity access restrictions, glacier crevasses.",
+            "geology": "A complex fold-and-thrust belt formed by the oblique collision of the Indian Plate margin with the Eurasian plate along the Afghan border zone; seismically very active, with frequent moderate earthquakes centered in the Hindu Kush.",
+            "tourist_guide": (
+                "The Chitral valley and the culturally distinct Kalash valleys (Bumburet, Rumbur, "
+                "Birir), home to the indigenous Kalash people and their unique festivals, are the "
+                "region's signature attractions. The Shandur Pass hosts the famous high-altitude "
+                "polo festival each July, at roughly 3,700 m."
+            ),
+            "rivers": ["Kabul River (tributaries)", "Chitral/Kunar River"],
+        },
+        "Hindu Raj Range": {
+            "highest_peak": "Koh-e-Bandaka, 6,812 m",
+            "other_notable_peaks": [
+                {"name": "Buni Zom", "elevation_m": 6551},
+                {"name": "Thui I", "elevation_m": 6524},
+            ],
+            "surrounding_areas": "Gilgit-Baltistan/Chitral border zone, wedged between the Hindu Kush and Karakoram ranges",
+            "climbing_details": "One of the least explored ranges in the region; several peaks remain unclimbed or only rarely summited, making it attractive for exploratory/first-ascent expeditions.",
+            "best_climbing_season": "July to August, weather-dependent.",
+            "permits_required": "Mountaineering permit via the Alpine Club of Pakistan; some zones require special/restricted-area permits.",
+            "access_towns": ["Gilgit", "Mastuj (Chitral side)"],
+            "trekking_routes": ["Yasin valley → Darkot Pass → Chitral (classic trans-range trek)", "Ishkoman valley treks"],
+            "hazards": "Very limited rescue/communications infrastructure, glacier travel, unpredictable weather.",
+            "geology": "A transitional metamorphic range linking the Hindu Kush and Karakoram tectonic domains, with less well-documented geology than its higher-profile neighbors.",
+            "tourist_guide": "Yasin and Ishkoman valleys offer quieter, less-visited trekking corridors connecting Chitral and Gilgit, popular with more experienced trekkers seeking solitude.",
+            "rivers": ["Gilgit River (tributaries)", "Yasin River"],
+        },
+    },
+    "Western and Southern Border Ranges": {
+        "Spin Ghar (Koh-e-Safed)": {
+            "highest_peak": "Sikaram, 4,761 m",
+            "other_notable_peaks": [
+                {"name": "Mila Sikaram (secondary summit)", "elevation_m": 4712},
+            ],
+            "surrounding_areas": "Kurram district, KPK, straddling the Pakistan-Afghanistan border (the name means 'White Mountain' for its winter snow cap)",
+            "climbing_details": "A moderate-altitude range with straightforward trekking rather than technical mountaineering; access has historically been limited by security conditions along the border, so organized expeditions are uncommon.",
+            "best_climbing_season": "May to September, when high routes are snow-free.",
+            "permits_required": "Local security clearance/NOC typically required for the Kurram border zone.",
+            "access_towns": ["Parachinar"],
+            "trekking_routes": ["Parachinar → Sikaram approach (security permitting)"],
+            "hazards": "Access/security restrictions, landmines/unexploded ordnance legacy in some border areas, cold exposure.",
+            "geology": "A limestone-dominated folded range, part of the western fold belt bordering the Iranian plateau, geologically continuous with ranges extending into eastern Afghanistan.",
+            "tourist_guide": "The Kurram valley and the Parachinar area (access-restricted at times) offer highland scenery and are historically significant Silk Road transit corridors.",
+            "rivers": ["Kurram River"],
+        },
+        "Sulaiman Mountains (Koh-e-Suleman)": {
+            "highest_peak": "Takht-e-Sulaiman, 3,487 m",
+            "other_notable_peaks": [
+                {"name": "Kaisargarh (Sulaiman range secondary peak)", "elevation_m": 3383},
+            ],
+            "surrounding_areas": "Border zone of Balochistan, KPK (Dera Ismail Khan) and Punjab (Dera Ghazi Khan)",
+            "climbing_details": "Accessible via Zhob or Fort Munro; a culturally and religiously significant peak, with a shrine near the summit associated with local legend, making it as much a pilgrimage trek as a mountaineering objective.",
+            "best_climbing_season": "March to May and September to November (avoiding extreme summer heat at lower elevations).",
+            "permits_required": "Local district permission recommended; some routes cross tribal-administered land requiring coordination with local authorities.",
+            "access_towns": ["Fort Munro", "Zhob"],
+            "trekking_routes": ["Fort Munro → Takht-e-Sulaiman summit trek"],
+            "hazards": "Extreme heat at lower elevations outside winter, limited water sources en route, rugged unmarked trails.",
+            "geology": "A folded sedimentary range formed by the collision of the Indian Plate with the Afghan block, marking the western structural edge of the Indus plains and a transition zone between the Iranian plateau and the subcontinent.",
+            "tourist_guide": "Fort Munro is a small hill station popular for its cooler climate relative to the surrounding plains; the Zhob valley offers additional highland scenery and access to the range's northern flank.",
+            "rivers": ["Zhob River", "Gomal River", "Sanghar River"],
+        },
+        "Kirthar Range": {
+            "highest_peak": "Zardak, 2,168 m",
+            "other_notable_peaks": [
+                {"name": "Kutte-ji-Qabar", "elevation_m": 2050},
+            ],
+            "surrounding_areas": "Border of Sindh and Balochistan, largely within Kirthar National Park",
+            "climbing_details": "A low-technical trekking range rather than a mountaineering destination; Kirthar National Park is the main access and management point, with guided day hikes and short treks.",
+            "best_climbing_season": "November to March (avoiding the extreme summer heat of the lower Sindh/Balochistan border zone).",
+            "permits_required": "Sindh Wildlife Department entry permit for Kirthar National Park.",
+            "access_towns": ["Karachi (gateway city)", "Karchat"],
+            "trekking_routes": ["Karchat → Kirthar plateau day treks", "Wildlife-viewing drives through the National Park"],
+            "hazards": "Extreme summer heat, scarce water sources, remote terrain with limited cell coverage.",
+            "geology": "A folded limestone range, part of the outer fold belt bordering the lower Indus plain, with fossil-rich sedimentary layers of interest to regional geologists.",
+            "tourist_guide": "Kirthar National Park protects Sindh ibex and urial habitat and is one of the largest protected areas in Pakistan; the range's dramatic layered limestone cliffs are a draw for photographers.",
+            "rivers": ["Hab River", "Western Nara (seasonal drainages)"],
+        },
+        "Toba Kakar Range": {
+            "highest_peak": "Khalifat Peak, ~3,487 m",
+            "other_notable_peaks": [
+                {"name": "Zarghun Ghar", "elevation_m": 3578},
+            ],
+            "surrounding_areas": "Pishin and Qila Abdullah districts, Balochistan, near the Afghan border (Chaman crossing)",
+            "climbing_details": "Rugged, arid terrain with limited formal climbing infrastructure; most ascents are informal/local rather than organized expeditions.",
+            "best_climbing_season": "April to June and September to October.",
+            "permits_required": "Local security coordination recommended given proximity to the Afghan border.",
+            "access_towns": ["Quetta", "Ziarat"],
+            "trekking_routes": ["Ziarat → Khalifat Peak approach", "Quetta plateau day hikes"],
+            "hazards": "Border-zone security considerations, arid terrain with limited water, extreme temperature swings.",
+            "geology": "A folded and faulted range at the tectonic boundary of the Afghan and Indian blocks, part of the broader Baluchistan fold belt shaped by oblique plate convergence.",
+            "tourist_guide": "The Ziarat juniper forests (among the oldest juniper stands in the world) and the cool Quetta plateau climate make this range a popular summer retreat for residents of the surrounding lowlands.",
+            "rivers": ["Zhob River (headwaters)", "Pishin Lora River"],
+        },
+        "Salt Range": {
+            "highest_peak": "Sakesar, 1,522 m",
+            "other_notable_peaks": [
+                {"name": "Chail (Salt Range escarpment high point)", "elevation_m": 1030},
+            ],
+            "surrounding_areas": "Northern Punjab (Khushab, Chakwal, Jhelum districts), overlooking the Potohar Plateau",
+            "climbing_details": "A low hill range suited to hiking and day trips rather than mountaineering; scenic escarpment drives and short trails are the norm.",
+            "best_climbing_season": "October to March (summer is very hot at these lower elevations).",
+            "permits_required": "None for general tourist access; mine visits (Khewra) are ticketed.",
+            "access_towns": ["Khewra", "Kallar Kahar", "Chakwal"],
+            "trekking_routes": ["Katas Raj → Salt Range escarpment viewpoint walks"],
+            "hazards": "Extreme summer heat, otherwise a low-risk range for casual visitors.",
+            "geology": (
+                "World-famous for the Khewra Salt Mine (one of the largest salt deposits on "
+                "Earth) and a rich Precambrian-to-Eocene sedimentary sequence exposed along its "
+                "escarpments; the range is a key stratigraphic reference section used globally in "
+                "South Asian geology, including a well-studied Permian-Triassic boundary sequence."
+            ),
+            "tourist_guide": "The Khewra Salt Mine (including its illuminated salt-crystal chambers), the ancient Hindu Katas Raj Temples complex, and Kallar Kahar's seasonal lake are the range's principal tourist draws, all within easy reach of Islamabad/Lahore.",
+            "rivers": ["Soan River (adjacent)"],
+        },
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 7. LAKES
+# ---------------------------------------------------------------------------
+LAKES = {
+    "Attabad Lake": {"province": "Gilgit-Baltistan", "formation": "Formed by the 2010 Hunza landslide dam", "type": "Landslide-dammed lake"},
+    "Satpara Lake": {"province": "Gilgit-Baltistan", "formation": "Natural lake, developed with a dam for Skardu water supply", "type": "Reservoir"},
+    "Rush Lake": {"province": "Gilgit-Baltistan", "formation": "High-altitude glacial lake near Nagar", "type": "Glacial lake"},
+    "Ghizer Lake (Taalidass)": {"province": "Gilgit-Baltistan", "formation": "Site of the 2025 Taalidass GLOF-related event", "type": "Glacial/landslide-influenced lake"},
+    "Saif-ul-Malook Lake": {"province": "KPK", "formation": "Glacial lake at the base of Malika Parbat, Kaghan valley", "type": "Glacial lake"},
+    "Manchar Lake": {"province": "Sindh", "formation": "Largest natural freshwater lake in Pakistan, fed by the Indus and Aral/Main Nara canals", "type": "Freshwater lake"},
+    "Keenjhar Lake": {"province": "Sindh", "formation": "Major freshwater reservoir supplying Karachi and Thatta", "type": "Reservoir lake"},
+    "Hanna Lake": {"province": "Balochistan", "formation": "Artificial lake near Quetta", "type": "Reservoir"},
+    "Hub Dam Lake": {"province": "Sindh/Balochistan border", "formation": "Reservoir on the Hub River supplying Karachi", "type": "Reservoir"},
+    "Khanpur Lake": {"province": "ICT/KPK border", "formation": "Reservoir on the Haro River", "type": "Reservoir"},
+    "Banjosa Lake": {"province": "AJK", "formation": "Natural lake near Rawalakot", "type": "Freshwater lake"},
+}
+
+# ---------------------------------------------------------------------------
+# 7B. DESERTS
+# ---------------------------------------------------------------------------
+DESERTS = {
+    "Thar Desert (Great Indian Desert)": {
+        "province": "Sindh",
+        "area_km2": 22000,
+        "type": "Subtropical arid (sandy) desert",
+        "characteristics": (
+            "Pakistan's largest desert, covering Tharparkar and Umerkot districts and "
+            "extending across the border into India. Semi-arid with monsoon-dependent "
+            "seasonal grazing and rain-fed ('barani') farming; home to the Thar Coalfield, "
+            "one of the world's largest lignite coal deposits, now feeding coal-power projects."
+        ),
+    },
+    "Cholistan Desert (Rohi)": {
+        "province": "Punjab",
+        "area_km2": 26000,
+        "type": "Subtropical arid (sandy) desert",
+        "characteristics": (
+            "Stretches along the Pakistan-India border south of Bahawalpur, following the "
+            "dried-up bed of the ancient Hakra/Ghaggar river. Dotted with historic forts "
+            "(Derawar Fort) along a former caravan route, and hosts the annual Cholistan "
+            "Jeep Rally and Desert Festival."
+        ),
+    },
+    "Kharan Desert": {
+        "province": "Balochistan",
+        "area_km2": 33000,
+        "type": "Rocky/sandy basin desert",
+        "characteristics": (
+            "A closed inland-drainage basin in western Balochistan around Kharan district. "
+            "Fed by seasonal flows from the Mashkel and other hill-torrent rivers that "
+            "terminate in the Hamun-e-Mashkel salt marsh rather than reaching the sea."
+        ),
+    },
+    "Thal Desert": {
+        "province": "Punjab",
+        "area_km2": 19000,
+        "type": "Subtropical arid (sandy) desert",
+        "characteristics": (
+            "Lies in the Indus-Jhelum/Chenab doab of central Punjab. Substantially "
+            "reclaimed for irrigated agriculture since the mid-20th-century Thal "
+            "Development Project, though large tracts of dunes remain in its core."
+        ),
+    },
+    "Katpana Cold Desert": {
+        "province": "Gilgit-Baltistan",
+        "area_km2": None,
+        "type": "High-altitude cold desert",
+        "characteristics": (
+            "A rare high-altitude cold desert near Skardu (~2,226 m), with active sand "
+            "dunes set against a backdrop of snow-capped Karakoram peaks — a notable "
+            "geomorphological curiosity and increasingly popular tourist stop."
+        ),
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 8. NATIONAL DISASTER RISK CONTEXT
+# ---------------------------------------------------------------------------
+DISASTER_HAZARD_PROFILE = {
+    "A. Hydro-meteorological Hazards": {
+        "Floods": {
+            "Riverine Floods": "Large-scale overbank flooding along the Indus and its tributaries, typically monsoon-driven (e.g., 2010, 2022 floods).",
+            "Flash Floods / Hill Torrents": "Sudden, high-velocity flows from Balochistan/Sulaiman/Kirthar hill torrents and steep KPK/GB valleys.",
+            "Urban Flooding": "Drainage-system failure in cities like Karachi and Lahore during intense short-duration rainfall.",
+            "Mudflows": "Saturated slope debris flows in northern mountain valleys after intense rain or glacial outburst.",
+            "Cloudbursts": "Highly localized, extremely intense rainfall events increasingly reported in GB/KPK and monsoon-affected hill zones.",
+        },
+        "Monsoon Variability": "Erratic onset, intensity and withdrawal of the summer monsoon, producing both localized flooding and prolonged dry spells.",
+        "Droughts": "Recurrent in Balochistan, Sindh (Tharparkar) and southern Punjab, driven by rainfall deficits and reduced river/canal supply.",
+        "GLOFs": "Glacial Lake Outburst Floods from moraine- or ice-dammed lakes in GB and northern KPK, a rapidly growing risk under warming.",
+        "Heatwaves": "Intense pre-monsoon heat events affecting Sindh and southern Punjab, with public-health and energy-demand impacts.",
+        "Water Stress": "Growing gap between water availability and demand across the Indus Basin, worsened by inefficient use and storage shortfalls.",
+    },
+    "B. Pakistan's Tectonic Setting": {
+        "Earthquakes": "High seismicity along the Chaman, Main Boundary and Main Karakoram Thrust fault systems (e.g., 2005 Kashmir earthquake).",
+        "Landslides": "Common in GB, KPK and AJK, often triggered by seismic activity, rainfall or slope undercutting from river erosion.",
+        "Avalanches": "Snow avalanches in high-altitude Karakoram/Himalaya/Hindu Kush terrain, a hazard to roads (e.g., Karakoram Highway) and settlements.",
+        "Tsunamis": "Low-probability but non-zero risk along the Makran coast, linked to the Makran Subduction Zone (1945 Makran tsunami precedent).",
+        "Seismic Activity and Land Shifts": "Ongoing crustal deformation from the India-Eurasia collision affecting infrastructure stability in the north.",
+        "Snow Contingencies": "Heavy snowfall events isolating northern communities and disrupting the Karakoram Highway and mountain passes.",
+    },
+    "C. Climatological & Emerging Hazards": {
+        "Accelerated Glacier Melt": "Warming-driven retreat and destabilization of Karakoram/Himalaya/Hindu Kush glaciers, feeding GLOF risk and altering river regimes.",
+        "Sea-Level Rise and Cyclones": "Rising Arabian Sea levels and increasing cyclone activity threatening the Sindh/Balochistan coastline.",
+        "Smog": "Seasonal (autumn-winter) air-quality crisis concentrated in Punjab's urban corridor (Lahore-Faisalabad).",
+        "Pollution (Air, Water, Soil)": "Industrial effluent, agricultural runoff and vehicular emissions degrading air, surface/groundwater and soil quality.",
+        "Unpredictably Erratic Global Climate Patterns": "Broader climate-change-driven variability compounding all of the above hazard categories.",
+    },
+    "D. Anthropogenic Hazards": {
+        "Industrial Accidents and Chemical Spills": "Risks concentrated in industrial clusters (Karachi, Faisalabad, Sialkot) with limited hazardous-material regulation.",
+        "Transport and Infrastructure Risks": "Road, rail and bridge failures, often flood- or landslide-triggered, especially on mountain highways.",
+        "Maritime Disasters": "Shipping and port-related incidents along the Karachi/Gwadar coastline.",
+        "Oil Spills": "Risk associated with port operations and coastal shipping lanes near Karachi and Gwadar.",
+        "Fires": "Urban structural fires, wildfires in forested northern/western regions, and industrial fires.",
+        "Encroachments": "Unregulated construction on floodplains, riverbeds and drainage channels, amplifying flood exposure.",
+        "Food Security": "Vulnerability of crop production to floods, droughts and water disputes, affecting national food supply.",
+        "Population Bulge": "Rapid population growth increasing exposure and straining infrastructure and disaster response capacity.",
+        "Biological Hazards": "Epidemic/disease outbreak risk, often compounded by post-flood waterborne and vector-borne illness.",
+    },
+}
+
+DISASTER_EXPOSURE_VULNERABILITY = {
+    "Population Pressure and Diverse Terrains": "Rapid urban growth combined with highly varied terrain (coast, plains, mountains, deserts) multiplies hazard exposure pathways.",
+    "Vulnerable Settlements and Infrastructure Deficits": "Informal settlements, weak building codes and inadequate drainage/flood-protection infrastructure raise disaster losses.",
+    "Institutional Vulnerabilities": {
+        "Delayed Decision-Making": "Slow inter-agency coordination during disaster response.",
+        "Operational Confusion": "Overlapping mandates between federal, provincial and district disaster bodies.",
+        "Public Distrust": "Erosion of public confidence in early-warning and relief systems after past response failures.",
+        "Resource Misallocation": "Inefficient targeting of relief and reconstruction funds.",
+    },
+    "Socio-Economic Stratification Amplifying Risk": {
+        "drivers": ["Poverty", "Income inequality", "Limited access to education, healthcare and emergency resources",
+                    "Resource disparities", "Spatial entrapment", "Unequal mobility",
+                    "Marginalized communities", "Poor households", "Institutional neglect"],
+        "summary": "Poorer and marginalized communities are disproportionately located in high-hazard zones (floodplains, hill-torrent paths, coastal fringes) with the least capacity to prepare, evacuate or recover.",
+    },
+}
+
+DISASTER_EMERGING_RISKS = {
+    "Global Climate Risk Index (CRI) 2025": "Pakistan continues to rank among the countries most affected by climate-related extreme weather events over the past two decades, per Germanwatch's Global Climate Risk Index series.",
+    "Increasing GLOF Risks": (
+        "Rising temperatures are destabilizing moraine-dammed lakes, increasing the likelihood of sudden breaches. "
+        "GLOFs threaten downstream settlements, hydroelectric infrastructure and road networks such as the Karakoram "
+        "Highway. GB and parts of KP are seeing an alarming rise in glacial lake formation due to accelerated glacier "
+        "melt. The 2025 Taalidass/Ghizer Lake event and the 2010 Attabad Lake disaster underline the need for proactive "
+        "mitigation, remote-sensing and in-situ hydrological monitoring, and community-level early-warning systems."
+    ),
+    "Erratic Monsoons and Shifting Precipitation Patterns": (
+        "The monsoon system is becoming increasingly unpredictable: early onset and extended seasons, uneven rainfall "
+        "distribution (the 'short-burst' phenomenon), and high-intensity weather (localized cloudbursts, intense "
+        "downpours, sudden hailstorms and atmospheric instability) are now common — resulting in localized flash "
+        "floods, cloudbursts, mudflows, riverine flooding and soil erosion."
+    ),
+    "Sea Intrusion and Coastal Salinization": (
+        "Rising sea levels along Pakistan's 1,050 km coastal belt are compounding flood risk in low-lying areas, "
+        "particularly southern Sindh and Balochistan. Saltwater intrusion into freshwater aquifers is degrading "
+        "arable land and threatening agriculture- and aquaculture-dependent livelihoods. Karachi, Gwadar and Thatta "
+        "face increased vulnerability to tidal surges and cyclonic activity, amplified by poor drainage infrastructure "
+        "and rapid urbanization. Integrated coastal zone management, mangrove restoration and improved storm-surge "
+        "early-warning systems are critical mitigation priorities."
+    ),
+}
+
+DISASTER_RISK_SCENARIOS = {
+    "Baseline Scenario": {
+        "description": "Current trajectory: incremental improvements in early-warning systems and disaster funding but no major structural change.",
+        "features": ["Recurring seasonal flood/drought cycles", "Gradual glacier retreat", "Slow adaptation-financing uptake", "Localized, manageable disaster losses in most years"],
+    },
+    "Medium Scenario": {
+        "description": "Accelerated climate variability outpaces current adaptive capacity in several provinces.",
+        "features": ["More frequent GLOFs and flash floods", "Growing water stress between provinces", "Rising urban flooding and smog severity", "Increased internal displacement in high-risk districts"],
+    },
+    "Worst-Case Scenario": {
+        "description": "Compounding hazards (major riverine flood + GLOF + cyclone + drought in different regions concurrently) overwhelm national response capacity.",
+        "features": ["Simultaneous multi-hazard events straining NDMA/PDMA resources", "Severe agricultural and food-security shocks", "Major infrastructure loss (roads, power, irrigation)", "Large-scale displacement and cross-provincial water-sharing conflict"],
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 8b. HISTORICAL DISASTER EVENTS (illustrative timeline)
+# ---------------------------------------------------------------------------
+DISASTER_HISTORICAL_EVENTS = [
+    {
+        "year": 1935,
+        "name": "Quetta Earthquake",
+        "hazard_type": "Earthquake",
+        "provinces": ["Balochistan"],
+        "summary": "One of the deadliest earthquakes in South Asian history, devastating Quetta city; a major driver of modern seismic building-code awareness in Pakistan.",
+    },
+    {
+        "year": 1945,
+        "name": "Makran Tsunami",
+        "hazard_type": "Tsunami",
+        "provinces": ["Balochistan", "Sindh"],
+        "summary": "Triggered by a major offshore earthquake on the Makran Subduction Zone; struck the coastal belt and remains the key historical precedent for Pakistan's (low-probability but real) tsunami risk.",
+    },
+    {
+        "year": 2005,
+        "name": "Kashmir Earthquake",
+        "hazard_type": "Earthquake",
+        "provinces": ["AJK", "KPK"],
+        "summary": "Magnitude ~7.6 earthquake centered near Muzaffarabad; one of the deadliest natural disasters in Pakistan's history, exposing major gaps in seismic building standards and triggering national disaster-management reforms (leading to NDMA's creation).",
+    },
+    {
+        "year": 2010,
+        "name": "Attabad Lake Landslide & Outburst Risk",
+        "hazard_type": "Landslide-dammed lake / GLOF-adjacent",
+        "provinces": ["Gilgit-Baltistan"],
+        "summary": "A massive landslide in Hunza blocked the Hunza River, forming Attabad Lake, submerging villages and the Karakoram Highway, and creating an ongoing outburst-flood risk that reshaped local infrastructure planning.",
+    },
+    {
+        "year": 2010,
+        "name": "2010 Pakistan Floods",
+        "hazard_type": "Riverine flood",
+        "provinces": ["KPK", "Punjab", "Sindh", "Balochistan"],
+        "summary": "Among the most severe floods in Pakistan's recorded history, triggered by exceptionally heavy monsoon rainfall; affected roughly a fifth of the country's land area and displaced millions.",
+    },
+    {
+        "year": 2022,
+        "name": "2022 Pakistan Floods",
+        "hazard_type": "Riverine & flash flood",
+        "provinces": ["Sindh", "Balochistan", "KPK", "Punjab", "Gilgit-Baltistan"],
+        "summary": "Record monsoon rainfall combined with glacial melt produced catastrophic flooding across roughly a third of the country; among the costliest disasters in Pakistan's history in both humanitarian and economic terms.",
+    },
+    {
+        "year": 2025,
+        "name": "Taalidass / Ghizer Lake Event",
+        "hazard_type": "GLOF-related",
+        "provinces": ["Gilgit-Baltistan"],
+        "summary": "A glacial lake event in the Ghizer district highlighted the accelerating pace of glacial lake formation and outburst risk in GB, reinforcing calls for expanded remote-sensing monitoring and community early-warning systems.",
+    },
+]
+
+DISASTER_HAZARD_BY_PROVINCE = {
+    "Gilgit-Baltistan": ["GLOFs", "Landslides", "Avalanches", "Earthquakes", "Snow contingencies", "Accelerated glacier melt"],
+    "KPK": ["Flash floods / hill torrents", "Riverine floods", "Earthquakes", "Landslides", "Monsoon variability"],
+    "Punjab": ["Riverine floods", "Urban flooding", "Smog", "Heatwaves", "Water stress"],
+    "Sindh": ["Riverine floods", "Droughts", "Heatwaves", "Sea-level rise / coastal salinization", "Water stress"],
+    "Balochistan": ["Droughts", "Flash floods / hill torrents", "Earthquakes", "Tsunamis (coastal)", "Water stress"],
+    "AJK": ["Earthquakes", "Landslides", "Flash floods", "Avalanches"],
+    "ICT": ["Urban flooding", "Smog", "Landslides (Margalla Hills, minor)"],
+}
+
+# ---------------------------------------------------------------------------
+# 9. SOCIO-ECONOMIC & AGRO-ECONOMIC DOMAINS
+# ---------------------------------------------------------------------------
+SOCIO_ECONOMIC_DOMAIN = {
+    "Food Security": "Rivers and canal-fed irrigation underpin national staple-crop production (wheat, rice, sugarcane); disruptions directly threaten food availability.",
+    "Employment": "Agriculture, fisheries and hydropower construction/operations provide large-scale rural and semi-skilled employment.",
+    "Urban Growth": "River corridors and canal commands have historically shaped the location and growth of Pakistan's major cities.",
+    "Tourism": "Northern rivers, lakes and mountain ranges (GB, KPK, AJK) are core assets for domestic and international tourism.",
+    "Domestic & Industrial Utility": "Rivers and reservoirs supply municipal water and industrial process water to major urban centers.",
+    "Climate & Vulnerability": "Water availability variability directly links to climate vulnerability across all provinces, especially arid and coastal zones.",
+    "Energy Generation": "Hydropower (Tarbela, Mangla, CPEC run-of-river projects) supplies a substantial share of national electricity generation.",
+}
+
+AGRO_ECONOMIC_DOMAIN = {
+    "World's Largest Contiguous Irrigation System (IBIS)": "The Indus Basin Irrigation System is widely cited as the world's largest contiguous irrigation network, built around the Indus, Jhelum, Chenab, Ravi and Sutlej rivers and their link-canal system.",
+    "Crop Cultivation": "Supports wheat, cotton, rice and sugarcane cultivation across Punjab and Sindh, the backbone of Pakistan's agrarian economy.",
+    "Rural Livelihoods": "The majority of Pakistan's rural population depends directly or indirectly on canal-irrigated agriculture.",
+    "GDP & Employment Contribution": "Agriculture contributes a significant share of national GDP and remains one of the largest employment sectors in the country.",
+}
+
+# ---------------------------------------------------------------------------
+# 9B. MAJOR CROP SEASONS — RABI & KHARIF
+# ---------------------------------------------------------------------------
+CROP_SEASONS = {
+    "Rabi (Winter) Season": {
+        "sowing_window": "October – December",
+        "harvest_window": "March – May",
+        "description": (
+            "Pakistan's winter cropping season, sown after the monsoon using stored canal/reservoir water and "
+            "residual soil moisture, and harvested before the summer heat and monsoon onset."
+        ),
+        "major_crops": {
+            "Wheat": {
+                "description": "The dominant Rabi staple and Pakistan's most important food crop, grown mainly across Punjab and Sindh's canal commands.",
+                "typical_window": "Sown Nov, harvested Apr",
+                "engineering_water_note": "Peak canal demand falls in the Rabi closure-period window; relies heavily on Tarbela/Mangla conservation releases and groundwater supplementation in tail-end canal reaches.",
+            },
+            "Gram (Chickpea)": {
+                "description": "A major Rabi pulse, largely rain-fed/'barani' in Punjab's Thal and Potohar tracts and parts of Balochistan.",
+                "typical_window": "Sown Oct, harvested Mar",
+                "engineering_water_note": "Mostly rain-fed; low canal-water demand, grown on tracts outside the main perennial canal commands.",
+            },
+            "Lentil (Masoor)": {
+                "description": "Grown on a smaller area alongside gram as a Rabi pulse crop.",
+                "typical_window": "Sown Nov, harvested Mar",
+                "engineering_water_note": "Low irrigation requirement; typically 1-2 supplemental waterings where canal supply is available.",
+            },
+            "Barley": {
+                "description": "Grown in marginal and rain-fed areas, including parts of Punjab and Balochistan.",
+                "typical_window": "Sown Nov, harvested Apr",
+                "engineering_water_note": "Tolerant of limited/saline water supply; often grown on marginal canal-tail or rain-fed land.",
+            },
+            "Mustard / Rapeseed (Canola)": {
+                "description": "A Rabi oilseed crop grown across Punjab and Sindh to supply the edible-oil industry.",
+                "typical_window": "Sown Oct, harvested Feb",
+                "engineering_water_note": "Moderate water requirement; benefits from early-Rabi canal releases at sowing.",
+            },
+            "Tobacco (Rabi crop in KPK)": {
+                "description": "Grown mainly in Khyber Pakhtunkhwa's Swabi, Mardan and Buner districts.",
+                "typical_window": "Sown Jan, harvested May",
+                "engineering_water_note": "Relies on tubewell and Kabul/Swat-fed canal supplementation in KPK's command areas.",
+            },
+            "Potato (autumn/Rabi crop)": {
+                "description": "Grown as an autumn/Rabi crop in Punjab in addition to its main spring season.",
+                "typical_window": "Sown Oct, harvested Jan",
+                "engineering_water_note": "High-frequency, shallow irrigation requirement; typically tubewell-supplemented in canal tail reaches.",
+            },
+        },
+    },
+    "Kharif (Summer/Monsoon) Season": {
+        "sowing_window": "April – June",
+        "harvest_window": "October – December",
+        "description": (
+            "Pakistan's summer/monsoon cropping season, sown ahead of or during the monsoon and relying heavily "
+            "on peak-season canal supplies from the Indus system."
+        ),
+        "major_crops": {
+            "Cotton": {
+                "description": "A key Kharif cash crop and the backbone of Pakistan's textile export industry, concentrated in Punjab and Sindh.",
+                "typical_window": "Sown May, harvested Nov",
+                "engineering_water_note": "High peak-Kharif canal demand concentrated Jun-Aug; sensitive to Indus/Chenab system shortages during the critical boll-formation stage.",
+            },
+            "Rice": {
+                "description": "Grown in the canal commands of Punjab (notably basmati in the Kalar tract) and Sindh; a major export earner.",
+                "typical_window": "Sown Jun, harvested Nov",
+                "engineering_water_note": "Among the most water-intensive crops grown (continuous ponded irrigation); a major driver of peak Kharif canal/tubewell withdrawal.",
+            },
+            "Sugarcane": {
+                "description": "A water-intensive Kharif cash crop grown across Punjab, Sindh and parts of KPK, feeding the domestic sugar industry.",
+                "typical_window": "Sown Feb-Apr (perennial through Kharif), harvested Nov-Mar",
+                "engineering_water_note": "Year-round high water demand spanning both seasons; a major contributor to canal-command water stress in its growing districts.",
+            },
+            "Maize (Corn)": {
+                "description": "Grown mainly in Punjab (Chiniot, Sahiwal belt) and Khyber Pakhtunkhwa, for both food and feed use.",
+                "typical_window": "Sown Jul, harvested Oct",
+                "engineering_water_note": "Moderate water requirement; increasingly grown as a spring crop too, adding a secondary canal-demand peak.",
+            },
+            "Bajra (Pearl Millet)": {
+                "description": "A drought-tolerant Kharif staple grown chiefly on rain-fed land in Sindh and southern Punjab.",
+                "typical_window": "Sown Jul, harvested Oct",
+                "engineering_water_note": "Low irrigation requirement; grown largely outside the main perennial canal commands.",
+            },
+            "Jowar (Sorghum)": {
+                "description": "Grown as a Kharif fodder and grain crop, mostly rain-fed, in Punjab and Sindh.",
+                "typical_window": "Sown Jul, harvested Oct",
+                "engineering_water_note": "Low-to-moderate water requirement; tolerant of supply variability.",
+            },
+            "Groundnut": {
+                "description": "A Kharif oilseed grown mainly on the rain-fed Potohar Plateau of Punjab.",
+                "typical_window": "Sown Jun, harvested Oct",
+                "engineering_water_note": "Predominantly rain-fed; limited reliance on canal supply.",
+            },
+        },
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 9B-i. APICULTURE & AQUACULTURE — INDICATOR TABLES
+# ---------------------------------------------------------------------------
+APICULTURE_INDICATORS = [
+    {"indicator": "Registered beekeeping enterprises", "unit": "enterprises", "description": "Smallholder and migratory beekeeping operations registered with provincial agriculture/livestock departments."},
+    {"indicator": "Managed honeybee colonies", "unit": "colonies", "description": "Apis mellifera and Apis cerana colonies under active apiary management, including migratory colonies moved between bloom sites."},
+    {"indicator": "Annual honey production", "unit": "tonnes/year", "description": "Total honey harvested nationally, from both settled and migratory apiaries."},
+    {"indicator": "Crop-pollination service area", "unit": "hectares", "description": "Area of pollination-dependent crops (mustard, sunflower, fruit orchards) estimated to benefit from managed-colony pollination."},
+    {"indicator": "Export share of honey production", "unit": "% of output", "description": "Share of national honey production exported rather than consumed domestically."},
+]
+
+AQUACULTURE_INDICATORS = [
+    {"indicator": "Freshwater fish-farm area", "unit": "hectares", "description": "Pond area under freshwater carp culture (rohu, catla, mrigal), chiefly in Punjab and Sindh, fed by canal/reservoir supply."},
+    {"indicator": "Brackish-water/coastal shrimp-farm area", "unit": "hectares", "description": "Coastal shrimp and fish-farming area along the Sindh and Balochistan coast and the Indus Delta."},
+    {"indicator": "Cold-water trout-farming units", "unit": "units/hatcheries", "description": "Rainbow and brown trout hatcheries and grow-out units in the cold mountain streams of KPK, GB and AJK."},
+    {"indicator": "Annual aquaculture production", "unit": "tonnes/year", "description": "Total farmed fish and shrimp output across freshwater, brackish/coastal and cold-water systems."},
+    {"indicator": "Export share of aquaculture output", "unit": "% of output", "description": "Share of national aquaculture production exported, chiefly coastal shrimp and marine fish."},
+]
+
+# ---------------------------------------------------------------------------
+# 9D. INPUT-DRIVEN REGIONAL SOCIO/AGRO DATASET (editable in the app)
+# ---------------------------------------------------------------------------
+# Seed values only — illustrative starting figures for the editable
+# province/region table shown in both the Socio-Economic and Agro-Economic
+# Domain sections. Users can edit these in-app; nothing here is an official
+# statistic. Verify against PBS/MNFSR/provincial agriculture department
+# data before using in any formal context.
+REGIONAL_AGRO_SOCIO_DATA = [
+    {"Province/Region": "Punjab", "Cultivated area (ha)": 11800000, "Crop production (tonnes)": 42000000, "Employment (persons)": 9500000, "Honey production (tonnes)": 4200, "Aquaculture production (tonnes)": 85000},
+    {"Province/Region": "Sindh", "Cultivated area (ha)": 5600000, "Crop production (tonnes)": 17500000, "Employment (persons)": 4300000, "Honey production (tonnes)": 900, "Aquaculture production (tonnes)": 110000},
+    {"Province/Region": "Khyber Pakhtunkhwa", "Cultivated area (ha)": 1900000, "Crop production (tonnes)": 4100000, "Employment (persons)": 2100000, "Honey production (tonnes)": 2600, "Aquaculture production (tonnes)": 12000},
+    {"Province/Region": "Balochistan", "Cultivated area (ha)": 1200000, "Crop production (tonnes)": 1800000, "Employment (persons)": 900000, "Honey production (tonnes)": 350, "Aquaculture production (tonnes)": 3000},
+    {"Province/Region": "Azad Jammu & Kashmir", "Cultivated area (ha)": 210000, "Crop production (tonnes)": 320000, "Employment (persons)": 260000, "Honey production (tonnes)": 480, "Aquaculture production (tonnes)": 1500},
+    {"Province/Region": "Gilgit-Baltistan", "Cultivated area (ha)": 95000, "Crop production (tonnes)": 140000, "Employment (persons)": 110000, "Honey production (tonnes)": 150, "Aquaculture production (tonnes)": 900},
+]
+
+REGIONAL_AGRO_SOCIO_METRICS = [
+    "Cultivated area (ha)",
+    "Crop production (tonnes)",
+    "Employment (persons)",
+    "Honey production (tonnes)",
+    "Aquaculture production (tonnes)",
+]
+
+REGIONAL_AGRO_SOCIO_GRAPH_TYPES = ["Bar chart", "Pie chart", "Scatter plot", "Line chart"]
+
+REGIONAL_AGRO_SOCIO_NOTE = (
+    "Seed/illustrative starting figures only, editable in-app — not official statistics. "
+    "Verify against the Pakistan Bureau of Statistics (PBS), the Ministry of National Food "
+    "Security & Research, and provincial agriculture/livestock departments before use in any "
+    "formal report."
+)
+
+# ---------------------------------------------------------------------------
+# 9C. ALLIED AGRICULTURE SECTORS — APICULTURE & AQUACULTURE
+# ---------------------------------------------------------------------------
+ALLIED_AGRI_SECTORS = {
+    "Apiculture (Beekeeping)": {
+        "overview": (
+            "A growing allied sub-sector built mainly around the European honeybee (Apis mellifera), "
+            "introduced alongside the native Apis cerana and Apis florea, providing rural income, honey "
+            "production and crop-pollination services."
+        ),
+        "key_regions": "Khyber Pakhtunkhwa (Malakand, Swat, Mansehra), Punjab (Potohar and canal-irrigated districts), and parts of Azad Jammu & Kashmir and Balochistan.",
+        "economic_role": (
+            "Supports smallholder and migratory beekeeping enterprises producing honey for domestic consumption "
+            "and export, and improves yields in pollination-dependent crops such as mustard, sunflower and fruit orchards."
+        ),
+        "challenges": "Pesticide exposure, habitat/floral loss, disease and parasite pressure (e.g. Varroa mites), and climate variability affecting bloom timing.",
+    },
+    "Aquaculture & Fisheries": {
+        "overview": (
+            "Encompasses freshwater fish farming fed by the canal/reservoir network, brackish-water/coastal "
+            "shrimp and fish farming, and cold-water trout farming in the northern mountain streams."
+        ),
+        "key_regions": (
+            "Freshwater carp culture is concentrated in Punjab and Sindh (fed by canals and reservoirs such as "
+            "Tarbela and Mangla); brackish-water shrimp and fish farming occurs along the Sindh and Balochistan "
+            "coast and in the Indus Delta; trout farming is practiced in the cold streams of KPK, GB and AJK."
+        ),
+        "species": "Major carps (rohu, catla, mrigal) in freshwater ponds; shrimp/prawn and marine fish species along the coast; rainbow and brown trout in northern hatcheries.",
+        "economic_role": (
+            "A source of rural livelihoods and protein supply, and a modest but growing export sector "
+            "(particularly seafood/shrimp), though it remains far smaller than crop agriculture in overall GDP share."
+        ),
+        "challenges": "Reduced freshwater/silt inflow to the Indus Delta affecting coastal fisheries and mangrove nurseries, water quality, and limited adoption of modern hatchery and feed technology.",
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 10. GEO-POLITICAL & STRATEGIC DOMAINS
+# ---------------------------------------------------------------------------
+GEOPOLITICAL_DOMAIN = {
+    "The Hydro-Politics of Kashmir": (
+        "Kashmir's location at the headwaters of the Jhelum and Chenab rivers makes it central to India-Pakistan "
+        "water relations; upstream infrastructure decisions in Indian-administered Kashmir have direct downstream "
+        "implications for AJK and Punjab."
+    ),
+    "The Indus Waters Treaty (IWT) Crisis": (
+        "The 1960 IWT allocated the eastern rivers (Ravi, Sutlej, Beas) to India and the western rivers (Indus, "
+        "Jhelum, Chenab) to Pakistan, with India retaining limited run-of-river hydropower rights on the western "
+        "rivers. Recent years have seen the treaty's implementation mechanisms come under strain amid broader "
+        "bilateral tensions, with disputes over the design of Indian hydropower projects on the western rivers."
+    ),
+    "Maritime Trade Infrastructure": (
+        "Karachi Port, Port Qasim and the CPEC-linked Gwadar Port anchor Pakistan's maritime trade and are "
+        "increasingly tied to river-basin and coastal-zone management given sea-intrusion and siltation pressures."
+    ),
+}
+
+INTERNAL_WATER_DISPUTES = {
+    "overview": "Beyond the international dimension, Pakistan faces persistent inter-provincial disputes over Indus water distribution, chiefly between upper-riparian Punjab and lower-riparian Sindh.",
+    "Sindh's Grievances (Lower Riparian)": (
+        "Sindh argues that upstream withdrawals and new canal proposals reduce flows reaching the province, "
+        "threatening Indus delta ecology, the Manchar/Keenjhar lake systems, and the '10-day flow' guarantees "
+        "envisioned in the 1991 Water Apportionment Accord."
+    ),
+    "Punjab's Counter-Claims (Upper Riparian)": (
+        "Punjab maintains that its allocations follow the 1991 Accord formula and that new storage/canal projects "
+        "(e.g., proposed corporate agriculture canal schemes) are needed for national food security and do not "
+        "breach Sindh's entitlements."
+    ),
+    "Structural Gridlocks / Deadlock": (
+        "Disagreement over telemetry data accuracy, the pace of new storage construction, and Punjab's proposed "
+        "canal projects has repeatedly stalled consensus within IRSA and the CCI."
+    ),
+    "Environmental Impacts of Indian Chenab Projects on Punjab's Crops": {
+        "Flow Reductions at Head Marala": "Pakistani officials have periodically reported reduced and irregular flows at Marala Headworks, attributed in part to upstream Indian operations on the Chenab.",
+        "Devastating Crop Impacts": "Reduced or unpredictable Chenab flows affect sowing schedules and yields for Punjab's Rabi and Kharif crops in the Chenab command area.",
+    },
+}
+
+IRSA_LEGAL_MECHANISMS = {
+    "IRSA Technocratic Vote Deadlock": "The Indus River System Authority's provincial-member voting structure has at times produced deadlock on distribution disputes, particularly around telemetry and shortage-sharing formulas.",
+    "Council of Common Interests (CCI) Appeal": "Unresolved IRSA disputes are escalated to the CCI, the constitutional forum for resolving inter-provincial disagreements on shared resources.",
+    "Constitutional Review (Supreme Court)": "In some cases, provinces have sought judicial review of water-distribution or canal-project decisions before the Supreme Court of Pakistan.",
+    "The 2024-2026 Restructuring Crisis": "Renewed debate over IRSA's composition, voting weight and the 1991 Accord's implementation has driven proposals to restructure the authority's decision-making process.",
+    "The Veto Power and Conciliation": "Discussions have centered on whether any single province should hold an effective veto over shared-water decisions, versus consensus-based conciliation mechanisms.",
+    "Judicial Intervention": "Courts have occasionally been asked to adjudicate procedural disputes (e.g., environmental clearance requirements for new canal projects) rather than the underlying allocation formula itself.",
+}
+
+# ---------------------------------------------------------------------------
+# 11. CHINA'S HYDROPOWER INVESTMENT FOOTPRINT (CPEC)
+# ---------------------------------------------------------------------------
+CHINA_HYDROPOWER_FOOTPRINT = {
+    "Dominant Share of FDI": (
+        "Hydropower and broader energy projects have historically represented one of the largest single categories "
+        "of Chinese foreign direct investment into Pakistan under CPEC, reflecting the strategic priority placed on "
+        "addressing the country's electricity generation shortfall."
+    ),
+    "Major Hydropower Asset Portfolio": {
+        "Karot Hydropower Project": {"capacity_MW": 720, "river": "Jhelum River", "status": "Operational (2022)", "notes": "First hydropower project financed under the CPEC framework; run-of-river design."},
+        "Suki Kinari (SK) Hydropower Station": {"capacity_MW": 884, "river": "Kunhar River", "status": "Operational (2024)", "notes": "Located in KPK's Kaghan valley; faced construction delays and security-related cost escalation."},
+        "Kohala Hydropower Project": {"capacity_MW": 1124, "river": "Jhelum River", "status": "Under development", "notes": "One of the largest planned private-sector hydropower investments in Pakistan."},
+        "Azad Pattan Hydropower Project": {"capacity_MW": 700.7, "river": "Jhelum River", "status": "Under development", "notes": "Run-of-river project in AJK; financing and implementation timelines have faced periodic revision."},
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 12. INDIA'S UPSTREAM DAM DESIGN DISPUTES (Chenab tributaries)
+# ---------------------------------------------------------------------------
+INDIA_DAM_DESIGN_DISPUTES = {
+    "Pakal Dul Dam": {"capacity_MW": 1000, "river": "Marusudar River (Chenab tributary)", "location": "Indian-administered Jammu & Kashmir"},
+    "Ratle Dam": {"capacity_MW": 850, "river": "Chenab River", "location": "Indian-administered Jammu & Kashmir"},
+    "technical_points_of_contention": {
+        "Pondage Capacity": {
+            "issue": "The volume of water a run-of-river plant can hold behind its dam for short-term regulation.",
+            "pakistan_view": "Pakistan contends that the pondage allowed under the IWT's technical criteria for run-of-river plants is being exceeded or interpreted too liberally, enabling India greater short-term control over downstream flow timing.",
+        },
+        "Freeboard Height & Dam Elevation": {
+            "issue": "The margin of dam height above maximum water level, and overall structure elevation.",
+            "pakistan_view": "Pakistan argues higher-than-necessary freeboard and dam elevation could allow greater storage capability than the 'run-of-river' classification permits under the treaty.",
+        },
+        "Deep-Level Outlets and Gated Spillways": {
+            "issue": "Low-level outlets and gated (rather than ungated/fixed) spillways affect a dam's ability to flush sediment and regulate flow.",
+            "pakistan_view": "Pakistan has raised concerns that gated spillways and deep-level outlets give India operational flexibility to manipulate downstream flow timing beyond what the treaty's technical annexures intend.",
+        },
+        "Court of Arbitration (CoA) Interventions": (
+            "Pakistan has pursued international arbitration (Permanent Court of Arbitration, following the Kishenganga "
+            "precedent) over the design parameters of projects like Kishenganga, Ratle and Pakal Dul, while India has "
+            "favored the Neutral Expert mechanism under the treaty; the parallel-track dispute-resolution process "
+            "itself has become a point of procedural contention between the two states."
+        ),
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 13. SOURCES / REFERENCES
+# ---------------------------------------------------------------------------
+# Primary/official references backing the geopolitical, CPEC and IBIS content
+# above. Grouped by topic for display in the app's "Sources" section.
+SOURCES = {
+    "Indus Waters Treaty & Arbitration": [
+        {
+            "label": "PCA — Indus Waters Western Rivers Arbitration (Pakistan v. India)",
+            "url": "https://pca-cpa.org/en/cases/284/",
+        },
+        {
+            "label": "PCA — June 2025 Supplemental Award on Competence",
+            "url": "https://pca-cpa.org/en/news/pca-press-release-pca-case-no-2023-01-proceedings-under-the-indus-waters-treaty-islamic-republic-of-pakistan-v-republic-of-india-3/",
+        },
+    ],
+    "CPEC Hydropower Projects": [
+        {
+            "label": "PPIB — CPEC Projects (updated June 30, 2026)",
+            "url": "https://www.ppib.gov.pk/cpec.html",
+        },
+        {
+            "label": "CPEC — Energy Projects",
+            "url": "https://cpec.gov.pk/energy",
+        },
+        {
+            "label": "CPEC — Karot Hydropower Project",
+            "url": "https://cpec.gov.pk/project-details/16",
+        },
+        {
+            "label": "CPEC — Suki Kinari Hydropower Project",
+            "url": "https://cpec.gov.pk/project-details/15",
+        },
+        {
+            "label": "CPEC — Kohala Hydropower Project",
+            "url": "https://www.cpec.gov.pk/project-details/23",
+        },
+        {
+            "label": "CPEC — Azad Pattan Hydropower Project",
+            "url": "https://cpec.gov.pk/project-details/91",
+        },
+    ],
+    "Dams & Water Governance": [
+        {
+            "label": "WAPDA — Diamer-Bhasha Dam Project",
+            "url": "https://wapda.gov.pk/diamer-basha-dam-project/",
+        },
+        {
+            "label": "Ministry of Economic Affairs — Diamer-Bhasha clarification, 29 Aug 2026",
+            "url": "https://www.ead.gov.pk/NewsDetail/ODI1M2E0ODYtMjkyMi00NzdkLWE2ODQtMDk5NWIwZGY4YmE1",
+        },
+        {
+            "label": "CCI — Functions / Article 155",
+            "url": "https://www.cci.gov.pk/Detail/NDZhY2I2ZDUtZTgzNy00MWEzLWE2M2ItZjU2NTkyODc4ZGJm",
+        },
+    ],
+    "Indus Basin Irrigation System": [
+        {
+            "label": "World Bank — Indus Basin groundwater / IBIS",
+            "url": "https://www.worldbank.org/en/news/feature/2021/03/25/managing-groundwater-resources-in-pakistan-indus-basin",
+        },
+    ],
+    "Indus Delta Soil Salinity": [
+        {
+            "label": "Solangi et al. (2019) — Spatial Analysis of Soil Salinity in the Indus River Delta, Pakistan (ETASR 9(3))",
+            "url": "https://doi.org/10.48084/etasr.2818",
+        },
+        {
+            "label": "FAO — Sodic Soils and Their Management (salinity/sodicity classification thresholds)",
+            "url": "https://www.fao.org/4/x5871e/x5871e05.htm",
+        },
+    ],
+    "Water Quality Guidelines (EC · pH · DO)": [
+        {
+            "label": "PCRWR — Water Quality Monitoring & National Standards for Drinking Water Quality (NSDWQ)",
+            "url": "https://www.pcrwr.gov.pk/water-quality/",
+        },
+        {
+            "label": "WHO — Guidelines for Drinking-water Quality",
+            "url": "https://www.who.int/publications/i/item/9789241549950",
+        },
+        {
+            "label": "FAO — Water Quality for Agriculture (Irrigation and Drainage Paper 29)",
+            "url": "https://www.fao.org/4/t0234e/t0234e00.htm",
+        },
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# 14. FORESTS OF PAKISTAN
+# ---------------------------------------------------------------------------
+FOREST_TYPES = {
+    "Coniferous Forests": {
+        "regions": "Northern mountainous areas of Khyber Pakhtunkhwa and Gilgit-Baltistan (Swat, Dir, Kaghan, Chitral, Hazara)",
+        "altitude": "1,000 to 4,000 meters",
+        "species": "Pine (chir pine, blue pine), fir (pindrow fir), spruce and deodar — Pakistan's national tree",
+        "notes": (
+            "Pakistan's largest natural forest category by area, forming the backbone of the country's timber "
+            "and watershed-protection resources; zoned by altitude from chir pine at lower elevations to fir "
+            "and spruce near the timberline."
+        ),
+    },
+    "Mangrove Forests": {
+        "regions": "Coastal wetlands of the Indus Delta near Karachi (Sindh) and the Balochistan coast, along the Arabian Sea",
+        "altitude": "Sea level (tidal creeks and delta)",
+        "species": "Predominantly grey/white mangrove (Avicennia marina), with small stands of other species",
+        "notes": (
+            "Among the largest arid-climate mangrove ecosystems in the world; protect the coastline from erosion "
+            "and storm surge, support fisheries and shrimp nurseries, but face pressure from reduced freshwater "
+            "and silt inflow from the Indus and from coastal urbanization."
+        ),
+    },
+    "Riverain (Bela) Forests": {
+        "regions": "Narrow strips along the active floodplain (\"bela\") of the Indus River and its tributaries, chiefly in Punjab and Sindh",
+        "altitude": "Lowland floodplain",
+        "species": "Sheesham (Dalbergia sissoo), kikar/babul (Acacia nilotica), tamarisk and reed beds",
+        "notes": (
+            "Dependent on seasonal Indus flooding to regenerate; provide fuelwood, fodder and habitat corridors "
+            "along the river, but have shrunk with upstream flow regulation, barrages and encroachment."
+        ),
+    },
+    "Tropical Thorn (Scrub) Forests": {
+        "regions": "Low-lying plains and semi-arid flatlands of Punjab and Sindh, including the Potohar Plateau and parts of the Salt Range",
+        "altitude": "Plains (roughly 200–500 m)",
+        "species": "Acacia (kikar), Prosopis (jand/mesquite), Capparis (karir) and other drought-tolerant thorny shrubs and small trees",
+        "notes": (
+            "Open, sparse woodland adapted to low and erratic rainfall; historically grazed and cut for fuelwood, "
+            "making it one of the more degraded forest types by area."
+        ),
+    },
+    "Irrigated / Planted Forests": {
+        "regions": "Man-made plantations on canal-irrigated land in Punjab and Sindh, most famously Changa Manga near Lahore",
+        "altitude": "Plains",
+        "species": "Sheesham (Dalbergia sissoo), mulberry (Morus alba), kikar (Acacia nilotica), eucalyptus",
+        "notes": (
+            "Established from the mid-19th century onward — beginning with Changa Manga in 1866 — chiefly to "
+            "meet railway-sleeper and general timber demand; among the world's oldest large-scale hand-planted "
+            "forests, now also serving as wildlife reserves and recreation sites."
+        ),
+    },
+}
+
+NOTABLE_FORESTS = {
+    "Changa Manga Forest": {
+        "location": "Kasur and Lahore districts, Punjab (~70–80 km southwest of Lahore, off the N-5 near Chunian/Bhai Pheru)",
+        "forest_type": "Irrigated / Planted Forest",
+        "covered_area": "About 5,065 hectares (12,500 acres) today, down from a peak of around 8,400 acres originally afforested and later expanded",
+        "history_origin": (
+            "Planted from 1866 under the British Raj on the recommendation of Dr John Lindsay Stewart, Punjab's "
+            "first Conservator of Forests, to supply fuel and timber (sleepers) for the North-Western Railway. "
+            "Using a trench-and-ridge irrigation system devised by C. F. Amery and refined by Inspector-General "
+            "B. Ribbentrop, it became one of the world's largest and oldest hand-planted forests, once served by "
+            "its own narrow-gauge logging railway (from 1870)."
+        ),
+        "wildlife_nature": (
+            "Sheesham, kikar and mulberry plantations support around 14 mammal species (hog deer, jackal, "
+            "wild boar, nilgai), roughly 50 bird species including peafowl and vultures, plus reptiles and "
+            "amphibians; illegal logging has reduced its extent from its historic peak."
+        ),
+        "attractions_recreation": (
+            "A popular day-trip destination from Lahore for picnicking, cycling and camping, with a small "
+            "heritage narrow-gauge railway, lakes, and a wildlife-breeding area."
+        ),
+    },
+    "Ziarat Juniper Forest": {
+        "location": "Ziarat Valley and Mount Zarghoon, Balochistan (about 3 hours from Quetta)",
+        "forest_type": "Coniferous Forest (dry temperate juniper)",
+        "covered_area": "Roughly 110,000 hectares (some estimates put the wider biosphere reserve near 247,000 acres)",
+        "history_origin": (
+            "Pakistan's largest contiguous juniper (Juniperus excelsa) forest and believed to be the second-"
+            "largest juniper forest in the world after California's; some trees are estimated at over 1,500 "
+            "years old (some claims run into the thousands). Designated a UNESCO Biosphere Reserve in 2013 and "
+            "on Pakistan's tentative UNESCO World Heritage list since 2016."
+        ),
+        "wildlife_nature": (
+            "Slow-growing juniper stands between about 1,180 and 3,490 meters elevation host the Himalayan "
+            "black bear, markhor and a range of birds; the forest is a globally significant carbon sink but "
+            "faces threats from climate change, grazing pressure, illegal cutting and disease."
+        ),
+        "attractions_recreation": (
+            "Hiking among centuries-old 'living fossil' junipers, cool highland scenery, and proximity to "
+            "Ziarat's Quaid-e-Azam Residency; best visited April–October."
+        ),
+    },
+    "Ushu Forest": {
+        "location": "Ushu (Usho) Valley, north of Kalam, Upper Swat District, Khyber Pakhtunkhwa",
+        "forest_type": "Coniferous Forest",
+        "covered_area": "Roughly 18,000 hectares",
+        "history_origin": (
+            "A dense natural coniferous forest along the Ushu Khwar river valley, historically used for timber "
+            "and grazing by local Swati communities; it lies on the route between Kalam town and Mahodand Lake."
+        ),
+        "wildlife_nature": (
+            "Dominated by deodar (Pakistan's national tree), blue pine and spruce, with wild rose, juniper and "
+            "Himalayan yew understorey; home to elusive species such as musk deer, Himalayan black bear, red "
+            "fox and birds including woodpeckers and the Himalayan monal."
+        ),
+        "attractions_recreation": (
+            "Trekking routes including the multi-day Ushu Glacier trek, riverside camping and picnicking, and "
+            "the scenic drive/hike onward to Mahodand Lake."
+        ),
+    },
+    "Dir Forest (Kumrat Valley)": {
+        "location": "Upper Dir District, Khyber Pakhtunkhwa (Kumrat Valley, along the Panjkora River)",
+        "forest_type": "Coniferous Forest",
+        "covered_area": "Extensive valley-floor and slope forest along the Panjkora River (exact hectarage not consistently documented)",
+        "history_origin": (
+            "Part of the historic Dir Kohistan forest tracts long managed for timber under the former State of "
+            "Dir and, since 1969, Khyber Pakhtunkhwa's forest administration; the Kumrat Valley has become one "
+            "of the province's fastest-growing tourist destinations in recent years."
+        ),
+        "wildlife_nature": (
+            "Towering deodar stands on the valley floor give way to blue pine and West Himalayan fir higher up, "
+            "with oak forest in the lower valley; wildlife includes the Asiatic black bear, gray wolf, red fox, "
+            "yellow-throated marten and Kashmir musk deer."
+        ),
+        "attractions_recreation": (
+            "Waterfalls, the Kala Chashma (Black Spring), riverside camping on the Panjkora, and 4x4 jeep tracks "
+            "drawing roughly a million summer visitors to the wider Kumrat area."
+        ),
+    },
+    "Soon Valley Forest": {
+        "location": "Khushab District, Punjab (Salt Range, around Sakesar peak)",
+        "forest_type": "Sub-tropical scrub / dry forest",
+        "covered_area": "Valley spans about 780 km² (56 km long, ~14 km wide); forest cover concentrated on the surrounding Salt Range hills",
+        "history_origin": (
+            "A historic Salt Range valley long settled by the Janjua and Awan communities; its slopes were "
+            "progressively afforested and protected around the Sakesar ridge, the highest point in the Salt "
+            "Range at 1,525 m."
+        ),
+        "wildlife_nature": (
+            "The valley's Uchhali, Khabeki and Jahlar lakes form the Ramsar-listed Uchhali Complex wetland, "
+            "wintering ground for thousands of migratory waterfowl including the rare white-headed duck; forested "
+            "slopes shelter chinkara, wild boar and a variety of birdlife."
+        ),
+        "attractions_recreation": (
+            "Boating and birdwatching at Uchhali and Khabeki lakes, the Kanhatti Garden waterfalls, hiking around "
+            "Sakesar, and historic forts (Akrand, Tulhath) and shrines within the valley."
+        ),
+    },
+    "Mukshpuri Forest": {
+        "location": "Mukshpuri peak, Nathiagali area, Abbottabad District, Khyber Pakhtunkhwa",
+        "forest_type": "Coniferous Forest (moist temperate)",
+        "covered_area": "Part of the wider Ayubia National Park / Nathiagali forest tract (Ayubia NP covers about 3,312 hectares)",
+        "history_origin": (
+            "Forested hill forming part of the Galyat forest belt developed as a hill-station retreat under "
+            "British colonial administration; now managed jointly with the adjacent Ayubia National Park."
+        ),
+        "wildlife_nature": (
+            "Dense fir, spruce, pine and oak forest sheltering the common leopard, Himalayan palm civet, kalij "
+            "pheasant and a rich songbird population; part of a key west Himalayan biodiversity corridor with "
+            "Miranjani and Ayubia."
+        ),
+        "attractions_recreation": (
+            "A popular day hike (Mukshpuri Top trail) from Nathiagali offering panoramic Galyat views; a "
+            "staging point on the longer Mukshpuri–Miranjani ridge trek."
+        ),
+    },
+    "Rama Meadows Forest": {
+        "location": "Rama Valley, above Astore, Gilgit-Baltistan (base-camp side of Nanga Parbat)",
+        "forest_type": "Coniferous Forest bordering high-altitude alpine meadow",
+        "covered_area": "Localized valley forest and meadow belt (not precisely documented)",
+        "history_origin": (
+            "A traditional summer grazing meadow (Rama Lake sits above the tree line) used seasonally by local "
+            "herding communities; it has become a gateway trekking base on the Astore side of Nanga Parbat."
+        ),
+        "wildlife_nature": (
+            "Pine forest gives way to open alpine meadow and Rama Lake near the treeline, with views of Nanga "
+            "Parbat (8,126 m); habitat for markhor and a range of high-altitude birdlife in the surrounding hills."
+        ),
+        "attractions_recreation": (
+            "Camping among pine forest below Nanga Parbat, jeep tracks and short hikes to Rama Lake, and access "
+            "to further trekking toward Nanga Parbat base camp."
+        ),
+    },
+    "Kalam Forest": {
+        "location": "Kalam Valley, Upper Swat District, Khyber Pakhtunkhwa (also referred to as part of Ushu Forest)",
+        "forest_type": "Coniferous Forest",
+        "covered_area": "Forms a continuous belt with Ushu Forest stretching toward Utror and Matiltan",
+        "history_origin": (
+            "One of Swat's best-known forest tracts, historically part of the princely State of Swat's managed "
+            "timber reserves before merger into Pakistan in 1969; now a cornerstone of upper Swat's tourism economy."
+        ),
+        "wildlife_nature": (
+            "Pine, deodar and fir cover with diverse wildlife; the forest and adjoining Swat River corridor "
+            "support trout streams and seasonal wildflower meadows."
+        ),
+        "attractions_recreation": (
+            "Gateway to Mahodand Lake, Usho and Matiltan valleys; popular for hiking, riverside picnicking, "
+            "trout fishing and camping, especially May–October."
+        ),
+    },
+    "Chitral Forests": {
+        "location": "Chitral District, Khyber Pakhtunkhwa (including Chitral Gol, Birir and other side valleys)",
+        "forest_type": "Coniferous / dry temperate forest",
+        "covered_area": "Distributed across multiple valleys; Chitral Gol National Park alone covers 7,750 hectares",
+        "history_origin": (
+            "Long managed under the former princely State of Chitral's forest and hunting reserves, including "
+            "royal hunting grounds later converted into protected areas after Chitral's accession to Pakistan."
+        ),
+        "wildlife_nature": (
+            "Deodar, chilgoza pine and oak forest across steep, dry-temperate terrain; famous as prime habitat "
+            "for the flare-horned (Kashmir) markhor, snow leopard, and diverse high-altitude birdlife."
+        ),
+        "attractions_recreation": (
+            "Wildlife viewing (especially markhor) in Chitral Gol National Park, trekking in side valleys such "
+            "as Birir (home to the Kalash community), and access to the wider Hindu Kush trekking region."
+        ),
+    },
+    "Margalla Hills Scrub Forests": {
+        "location": "Margalla Hills, Islamabad Capital Territory",
+        "forest_type": "Sub-tropical broadleaf / scrub forest transitioning to moist temperate forest at higher points",
+        "covered_area": "Part of Margalla Hills National Park's 17,386 hectares",
+        "history_origin": (
+            "Foothill scrub and mixed broadleaf forest at the edge of the Himalayan and Potohar zones, protected "
+            "since Margalla Hills National Park's establishment in 1980 to conserve its unique Sino-Himalayan flora and fauna."
+        ),
+        "wildlife_nature": (
+            "Phulai (Acacia modesta), olive and other scrub species lower down give way to pine and oak at "
+            "higher elevations; habitat for the grey goral, barking deer, common leopard and rich birdlife at "
+            "the western edge of many Himalayan species' ranges."
+        ),
+        "attractions_recreation": (
+            "Islamabad's most-used hiking network (Trail 3, 5, 6 and others), Daman-e-Koh and Pir Sohawa "
+            "viewpoints, and close access to the Shakarparian and Rawal Lake green belt."
+        ),
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 15. NATIONAL PARKS & MAJOR RECREATIONAL PARKS
+# ---------------------------------------------------------------------------
+# Note: not every entry below is an IUCN/provincially-notified "national park" —
+# several (e.g. city/cantonment parks in Multan and Lahore) are large municipal
+# recreational parks that are commonly referred to as such locally. This is
+# flagged per-entry via the "type" field.
+NATIONAL_PARKS = {
+    "Ayub National Park": {
+        "province": "Punjab", "type": "National Park",
+        "area": "About 4 sq mi (2,300 acres), one of Pakistan's smallest national parks",
+        "established": "1959, by President Ayub Khan",
+        "notes": "Located in Rawalpindi; features an artificial lake, a miniature train, and extensive gardens; was under Rawalpindi Cantonment Board management from 1959–2001.",
+    },
+    "Jallo Park, Lahore": {
+        "province": "Punjab", "type": "Recreation & Wildlife Park",
+        "area": "461 acres (187 hectares)",
+        "established": "1978",
+        "notes": "About 7 km east of Lahore; one of Lahore's three main wildlife parks (with Changa Manga and Lahore Zoo Safari); includes a Wildlife Breeding Centre, a large boating/fishing lake, and a Botanical Garden & Butterfly House.",
+    },
+    "Lulusar-Dudipatsar National Park": {
+        "province": "Khyber Pakhtunkhwa", "type": "National Park",
+        "area": "About 560 km² (together with adjacent Saiful Muluk National Park, the pair protect ~88,000 hectares)",
+        "established": "2003",
+        "notes": "Upper Kaghan Valley, Mansehra District; protects the alpine Lulusar Lake (source of the Kunhar River) and Dudipatsar Lake amid snow-capped peaks; habitat for snow leopard and black bear.",
+    },
+    "Lal Suhanra National Park": {
+        "province": "Punjab", "type": "National Park",
+        "area": "About 658 km² (162,500 acres)",
+        "established": "1972 — Pakistan's first and oldest national park",
+        "notes": "At the edge of the Cholistan Desert, ~35 km from Bahawalpur; a UNESCO Biosphere Reserve combining desert, irrigated forest plantation and the Patisar Lake wetland; reintroduction site for blackbuck and chinkara.",
+    },
+    "Kirthar National Park": {
+        "province": "Sindh", "type": "National Park",
+        "area": "About 3,087 km² — Pakistan's third-largest national park",
+        "established": "1974 (initially a wildlife sanctuary from 1972)",
+        "notes": "Spans the Kirthar Range across Jamshoro and Dadu districts; the first Pakistani park listed on the UN's 1975 List of National Parks; protects Sindh ibex, urial, chinkara and leopard.",
+    },
+    "Khunjerab National Park": {
+        "province": "Gilgit-Baltistan", "type": "National Park",
+        "area": "226,913 hectares",
+        "established": "1975, on the recommendation of zoologist Dr George Schaller",
+        "notes": "High-altitude park (over half above 4,000 m) along the Karakoram Highway to the Khunjerab Pass; established chiefly to protect the Marco Polo sheep, alongside snow leopard and Himalayan ibex.",
+    },
+    "City Park, Multan": {
+        "province": "Punjab", "type": "Municipal Recreational Park",
+        "area": "Not precisely documented",
+        "established": "Not precisely documented",
+        "notes": "A public recreational park within Multan city offering green space, walking areas and family facilities.",
+    },
+    "Kashmir Park, DHA Multan": {
+        "province": "Punjab", "type": "Municipal / Community Park",
+        "area": "Not precisely documented",
+        "established": "Not precisely documented",
+        "notes": "A community park within the DHA Multan housing development, used for local recreation and walking.",
+    },
+    "Chitral Gol National Park": {
+        "province": "Khyber Pakhtunkhwa", "type": "National Park",
+        "area": "7,750 hectares",
+        "established": "1984",
+        "notes": "Lower Chitral District beside the Chitral River, about two hours from Chitral town; one of the most important refuges for the flare-horned (Kashmir) markhor.",
+    },
+    "Chaman Zar-e-Askari Park, Multan": {
+        "province": "Punjab", "type": "Cantonment Recreational Park",
+        "area": "Not precisely documented",
+        "established": "Not precisely documented",
+        "notes": "A garrison/cantonment-run recreational park in Multan (the name translates roughly to \"Garden of the Soldiers\"), used for public leisure.",
+    },
+    "Jinnah Park": {
+        "province": "Multiple provinces (several cities have a Jinnah Park, e.g. Islamabad, Faisalabad)", "type": "Municipal Recreational Park",
+        "area": "Varies by city",
+        "established": "Varies by city",
+        "notes": "A common name for municipal parks across Pakistan named after Quaid-e-Azam Muhammad Ali Jinnah; typically offer walking tracks, playgrounds and green space.",
+    },
+    "Hingol National Park": {
+        "province": "Balochistan", "type": "National Park",
+        "area": "About 6,100 km² (610,043 acres) — Pakistan's largest national park",
+        "established": "1988",
+        "notes": "Spans Lasbela, Awaran and Gwadar districts along the Makran Coastal Highway; famous for the Hingol mud volcanoes, the wind-sculpted 'Princess of Hope' rock formation, and habitat for Sindh ibex and Balochistan black bear.",
+    },
+    "Shakarparian National Park": {
+        "province": "Islamabad Capital Territory", "type": "Urban Park / Cultural Complex",
+        "area": "Part of the wider Islamabad Wildlife Management Board green belt alongside Margalla Hills and Rawal Lake",
+        "established": "Developed alongside Islamabad's planning from the 1960s onward",
+        "notes": "Hilltop park in Islamabad hosting the Pakistan Monument, Lok Virsa heritage museum and the Shakarparian Hills viewpoint overlooking the capital.",
+    },
+    "Faisal Park, Mumtazabad": {
+        "province": "Punjab", "type": "Municipal Recreational Park",
+        "area": "Not precisely documented",
+        "established": "Not precisely documented",
+        "notes": "A neighborhood recreational park in the Mumtazabad area of Multan.",
+    },
+    "Pir Lasura National Park": {
+        "province": "Azad Jammu & Kashmir", "type": "National Park",
+        "area": "About 1,580 hectares (15.8 km²) per peer-reviewed ecological studies (a government gazette figure of 2,916 acres for specified forest compartments is also cited)",
+        "established": "2005",
+        "notes": "Kotli District, near the Line of Control; subtropical pine and scrub forest habitat for common leopard, Indian pangolin and three vulture species including the Himalayan griffon.",
+    },
+    "Hazarganji-Chiltan National Park": {
+        "province": "Balochistan", "type": "National Park",
+        "area": "15,555 hectares (some sources cite a larger historical extent of ~325,000 acres)",
+        "established": "1980",
+        "notes": "Mastung District near Quetta, between the Hazarganji and Chiltan mountain ranges; established to protect the critically endangered, Pakistan-endemic Chiltan markhor.",
+    },
+    "Pakistan Park": {
+        "province": "Punjab", "type": "Municipal Recreational Park",
+        "area": "Not precisely documented",
+        "established": "Not precisely documented",
+        "notes": "A municipal recreational park name used in several Pakistani cities for public green space and family recreation.",
+    },
+    "Machiara National Park": {
+        "province": "Azad Jammu & Kashmir", "type": "National Park",
+        "area": "13,532 hectares",
+        "established": "1996",
+        "notes": "Muzaffarabad District; established chiefly to protect the western tragopan pheasant; infrastructure was damaged in the 2005 Kashmir earthquake.",
+    },
+    "Rajana Forest / Bhagat Wildlife Park": {
+        "province": "Punjab", "type": "Wildlife Breeding Centre / Park",
+        "area": "About 15 acres",
+        "established": "1987–89",
+        "notes": "On the Rajana–Samundri road, about 17 km from Toba Tek Singh and 3 km from Rajana town; a Punjab Wildlife & Parks Department breeding centre and recreational forest park.",
+    },
+    "Margalla Hills National Park": {
+        "province": "Islamabad Capital Territory", "type": "National Park",
+        "area": "17,386 hectares",
+        "established": "1980",
+        "notes": "Foothills bordering Islamabad; drained by the Kurang River, rich in Sino-Himalayan flora and fauna including grey goral, barking deer and leopard; one of the most-visited national parks in the world by hiking traffic.",
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 15B. INDUS DELTA SOIL SALINITY — EMI SURVEY & SOIL SAMPLING
+# ---------------------------------------------------------------------------
+# Summary statistics and classification thresholds below are drawn from
+# published research (see study_reference / SOURCES); the SAMPLE_SITES table
+# is clearly-labeled illustrative data for the map/chart demo, not the
+# original study's raw dataset.
+INDUS_DELTA_SOIL_SURVEY = {
+    "overview": (
+        "Reduced freshwater and silt discharge from the Indus (due to upstream storage, diversion and canal "
+        "withdrawals) has allowed saline seawater from the Arabian Sea to intrude into the Indus River Delta "
+        "(IRD), degrading agricultural land across Thatta, Sujawal and Badin districts. Researchers have "
+        "combined electromagnetic induction (EMI) surveying with physical soil sampling to map the resulting "
+        "soil salinity and sodicity across the delta."
+    ),
+    "study_reference": (
+        "Solangi, G.S., Siyal, A.A., Babar, M.M. & Siyal, P. (2019). 'Spatial Analysis of Soil Salinity in the "
+        "Indus River Delta, Pakistan.' Engineering, Technology & Applied Science Research, 9(3), 4271–4275. "
+        "DOI: 10.48084/etasr.2818"
+    ),
+    "methodology": {
+        "Electromagnetic Induction (EMI) Survey": (
+            "A handheld EMI instrument (e.g. an EM38-type sensor, as used in earlier Pakistani salinity-"
+            "monitoring work) is passed over the soil surface without ground contact, in horizontal and "
+            "vertical coil orientations, to rapidly measure apparent soil electrical conductivity (ECa) at "
+            "different depths across a grid — a fast, non-invasive way to cover a large delta area."
+        ),
+        "Soil Sampling & Laboratory Calibration": (
+            "EMI readings are calibrated against physically collected soil samples analyzed in the "
+            "laboratory. The referenced Indus Delta study analyzed 375 soil samples from 125 locations across "
+            "three depth increments (0–20 cm, 20–40 cm and 40–60 cm), measuring electrical conductivity (EC), "
+            "pH and exchangeable sodium percentage (ESP)."
+        ),
+        "Spatial Interpolation": (
+            "Point measurements (EMI and/or lab-calibrated samples) are interpolated across the survey area "
+            "using geostatistical techniques such as ordinary kriging or cokriging, producing continuous maps "
+            "of estimated EC, pH, ESP and overall soil salinity/sodicity class."
+        ),
+    },
+    "salinity_sodicity_classification": {
+        "Normal (non-saline, non-sodic)": "ECe < 4 dS/m and ESP < 15",
+        "Saline soil": "ECe > 4 dS/m, ESP < 15, saturated-paste pH < 8.5",
+        "Sodic soil": "ECe < 4 dS/m, ESP > 15, saturated-paste pH > 8.5 (occasionally exceeding 10.5)",
+        "Saline-sodic soil": "ECe > 4 dS/m, ESP > 15, saturated-paste pH < 8.5",
+    },
+    "depth_wise_findings": {
+        "0–20 cm (topsoil)": {"ec_exceeding_fao": 66.4, "esp_exceeding_fao": 72.8},
+        "20–40 cm": {"ec_exceeding_fao": 60.8, "esp_exceeding_fao": 72.0},
+        "40–60 cm": {"ec_exceeding_fao": 56.8, "esp_exceeding_fao": 79.2},
+    },
+    "key_findings": (
+        "Across all three depths, more than half of the 375 samples exceeded FAO guideline thresholds for "
+        "EC and ESP, and spatial analysis found more than 50% of the Indus River Delta sampled was affected "
+        "by soil salinity overall — with reduced freshwater flow and seawater intrusion identified as the "
+        "likely drivers."
+    ),
+}
+
+# Illustrative sample points across the Indus Delta for the map/chart demo.
+# NOT the original study's raw per-site dataset — representative values only,
+# consistent with the published depth-wise findings and FAO/Richards
+# classification thresholds above.
+INDUS_DELTA_SAMPLE_SITES = [
+    {"site": "Keti Bandar", "district": "Thatta", "EC_dS_per_m": 9.8, "pH": 8.6, "ESP_pct": 38, "classification": "Saline-sodic"},
+    {"site": "Kharo Chan", "district": "Thatta", "EC_dS_per_m": 14.2, "pH": 8.4, "ESP_pct": 45, "classification": "Saline-sodic"},
+    {"site": "Shah Bandar", "district": "Sujawal", "EC_dS_per_m": 6.1, "pH": 8.7, "ESP_pct": 22, "classification": "Saline-sodic"},
+    {"site": "Sujawal (town)", "district": "Sujawal", "EC_dS_per_m": 3.1, "pH": 8.9, "ESP_pct": 19, "classification": "Sodic soil"},
+    {"site": "Jati", "district": "Sujawal", "EC_dS_per_m": 5.4, "pH": 8.2, "ESP_pct": 12, "classification": "Saline soil"},
+    {"site": "Thatta (town)", "district": "Thatta", "EC_dS_per_m": 2.4, "pH": 7.9, "ESP_pct": 8, "classification": "Normal (non-saline, non-sodic)"},
+    {"site": "Badin", "district": "Badin", "EC_dS_per_m": 4.6, "pH": 8.3, "ESP_pct": 17, "classification": "Saline-sodic"},
+]
+
+# ---------------------------------------------------------------------------
+# 16. PCA (COURT OF ARBITRATION) TIMELINE — Indus Waters Western Rivers
+#     Arbitration (Islamic Republic of Pakistan v. Republic of India),
+#     PCA Case No. 2023-01
+# ---------------------------------------------------------------------------
+PCA_TIMELINE = [
+    {"date": "19 Aug 2016", "event": "Pakistan institutes arbitration", "detail": "Pakistan files a Request for Arbitration under Annexure G of the Indus Waters Treaty over the design of India's Kishenganga and Ratle hydropower projects; a Court of Arbitration is constituted, with the PCA acting as Secretariat."},
+    {"date": "21 Dec 2022", "event": "India writes to the World Bank on the Neutral Expert track", "detail": "India pursues a parallel Neutral Expert process for the same technical questions, a procedural divergence that becomes a recurring point of contention."},
+    {"date": "3 Feb 2023", "event": "PCA press release on expedited competence procedure", "detail": "The Court concludes its first meeting and initiates an expedited procedure to decide its own competence after India objects to the arbitration proceeding at all."},
+    {"date": "6 Jul 2023", "event": "Award on the Competence of the Court", "detail": "The Court unanimously rejects India's objections and confirms it is competent to hear Pakistan's claims."},
+    {"date": "18 Sep 2023", "event": "Corrections to the Award on Competence", "detail": "Minor corrections issued to the July 2023 competence award."},
+    {"date": "22 Mar 2024", "event": "Pakistan files its Memorial (First Phase on the Merits)", "detail": "Pakistan submits its detailed written case on the technical design disputes."},
+    {"date": "Apr 2024", "event": "Site visit to the Neelum-Jhelum Hydro-Electric Plant", "detail": "The Court conducts a site visit under an agreed protocol as part of its fact-finding on run-of-river design questions."},
+    {"date": "7 Jan 2025", "event": "Neutral Expert issues competence decision", "detail": "In the parallel track, the Neutral Expert finds India's referred points of difference fall within the scope of the treaty's technical Annexure F."},
+    {"date": "Apr 2025", "event": "India announces the IWT is 'held in abeyance'", "detail": "Following a deadly attack on civilians in Indian-administered Kashmir, India states it will hold the treaty in abeyance pending action against cross-border terrorism — the first such disruption in the treaty's history."},
+    {"date": "16 May 2025", "event": "Procedural Order No. 15 issued", "detail": "The Court invites both parties' written submissions on whether India's abeyance announcement affects the Court's and the Neutral Expert's competence; only Pakistan files a submission."},
+    {"date": "27 Jun 2025", "event": "Supplemental Award on the Competence of the Court", "detail": "The Court finds the treaty makes no provision for unilateral abeyance and reaffirms its continuing jurisdiction to proceed with the case."},
+    {"date": "8 Aug 2025", "event": "Award on Issues of General Interpretation of the IWT", "detail": "The Court rules on a set of general treaty-interpretation questions underlying the Kishenganga/Ratle/Pakal Dul design disputes."},
+    {"date": "8 Nov 2025", "event": "Decision on Pakistan's Request for Clarification", "detail": "The Court issues a clarification of aspects of its August 2025 interpretation award, in response to a Pakistani request."},
+    {"date": "21 Nov 2025", "event": "Procedural Order No. 17 (Second Phase on the Merits)", "detail": "The Court sets the schedule for the next substantive phase of the case, addressing the specific technical designs of the disputed projects."},
+    {"date": "12 Mar 2026", "event": "Procedural Order No. 21", "detail": "The Court addresses interim measures and the present status of the treaty in light of India's continued abeyance position."},
+    {"date": "31 Aug 2026", "event": "Interim order — construction freeze at Ratle", "detail": "The Court issues an interim enforcement order prohibiting India from pouring concrete on the Ratle dam wall and power-intake structures above specified elevations, intended to prevent irreversible construction facts on the ground while the parallel Neutral Expert technical review proceeds. Pakistan states the freeze remains in effect until 90 days after the Neutral Expert's final decision. India has publicly stated it does not consider the Court properly constituted and has indicated it will not comply with this order — see the Chenab Projects page's dedicated tab for both positions."},
+]
+
+HEAD_MARALA_NOTE = (
+    "The dashboard records reported concerns about reduced Chenab flows at Head Marala and potential "
+    "consequences for irrigation and crops as stakeholder claims, rather than asserting a causal crop-loss "
+    "estimate without a hydrological dataset."
+)
+
+COA_VALIDITY_NOTE = (
+    "Validity of the Court of Arbitration (Pakistan's position): Pakistan actively participates in the PCA "
+    "process and argues that the Court of Arbitration is a legally sound dispute-resolution body properly "
+    "constituted under Article IX of the Indus Waters Treaty, pointing to the Court's own 6 Jul 2023 Award on "
+    "the Competence of the Court (which rejected India's objections) and its 27 Jun 2025 Supplemental Award "
+    "reaffirming jurisdiction despite India's abeyance announcement. India's position, reported separately in "
+    "this dashboard, is that it does not consider the Court properly constituted and favors the treaty's "
+    "Neutral Expert mechanism instead — the two positions are presented side by side rather than adjudicated here."
+)
+
+# ---------------------------------------------------------------------------
+# 17. INDIA'S PROPOSED INTER-BASIN CANAL / TRANSFER PROJECTS
+#     (reported proposals/statements — not verified engineering plans)
+# ---------------------------------------------------------------------------
+INDIA_PROPOSED_CANAL_PROJECTS = {
+    "overview": (
+        "Indian officials have proposed inter-basin water-transfer infrastructure to make fuller use of the "
+        "country's Indus Waters Treaty allocations. These are reported proposals/statements of intent, not "
+        "verified, funded or completed engineering works."
+    ),
+    "113km Indus-to-Rajasthan Canal (reported proposal)": (
+        "Feasibility studies are reported to begin for a roughly 113-kilometre-long canal intended to redirect "
+        "surplus flows of the Indus system toward Punjab (India), Haryana and Rajasthan."
+    ),
+    "Two New Canal Systems (reported proposals)": {
+        "1(A). Chenab–Ravi–Beas–Sutlej link canal": (
+            "Reported proposal for a canal linking the Chenab with the Ravi-Beas-Sutlej system, described as intended "
+            "to ensure fuller use of the eastern rivers (Ravi, Beas, Sutlej) while also helping India use its full "
+            "treaty-allocated share of the western rivers (Indus, Jhelum, Chenab). Indian officials have reportedly "
+            "proposed completing the project within three years."
+        ),
+        "1(B). Ravi–Beas link": (
+            "A reported proposal for a separate Ravi-Beas link intended to capture water that would otherwise flow "
+            "beyond treaty-contemplated limits into Pakistan."
+        ),
+    },
+    "Expedited Hydropower Construction (reported)": (
+        "Alongside the canal proposals, India has reportedly moved to expedite construction of under-construction "
+        "hydropower projects on the western rivers — Pakal Dul (1,000 MW), Ratle (850 MW), Kiru (624 MW) and "
+        "Kwar (540 MW) — framed by Indian officials as using up India's entitled share of the Indus system."
+    ),
+    "framing_note": (
+        "These canal and acceleration proposals are reported as statements of Indian intent; this dashboard does "
+        "not assess their engineering feasibility, funding status or construction timeline."
+    ),
+}
+
+# ---------------------------------------------------------------------------
+# 18. "INDIAN ATROCITIES" — DETAILED TECHNICAL-DISPUTE & TIMELINE RECORD
+#     All content below is presented as Pakistan's and India's REPORTED
+#     positions/claims in the ongoing IWT technical dispute, with specific
+#     figures as cited in the dispute record — not as adjudicated fact.
+#     The Neutral Expert (Annexure F) and Court of Arbitration (Annexure G)
+#     tracks are parallel, and the two governments dispute each other's
+#     characterization of both the designs and the processes themselves.
+# ---------------------------------------------------------------------------
+TECHNICAL_DISPUTE_DETAILS = {
+    "Pondage Capacity (Live Storage)": {
+        "what_it_is": "The volume of water stored behind a dam to handle daily fluctuations in electricity demand.",
+        "the_dispute": (
+            "At Kishenganga, India's design reportedly provides for a 7.5 million cubic metre (MCM) pond; Pakistan "
+            "argues this should be capped at 1 MCM. At Ratle, India's design reportedly provides for a 24 MCM pond; "
+            "Pakistan has demanded it be restricted to 8 MCM."
+        ),
+        "pakistans_strategic_concern": (
+            "Pakistan argues that pondage at these levels gives India the physical capacity to store water during "
+            "critical sowing seasons or release sudden surges, which Pakistan characterizes as a risk of induced "
+            "drought or flood conditions downstream."
+        ),
+    },
+    "Orifice Spillways & Gate Placements": {
+        "what_it_is": "Spillways release excess floodwater to ensure dam safety; their height and whether they are gated affects sediment flushing and flow control.",
+        "the_dispute": (
+            "India's designs reportedly use deep, low-level orifice spillways with gated configurations, which India "
+            "has described as necessary to flush heavy Himalayan silt and prevent reservoir choking. Pakistan has "
+            "demanded higher-level, ungated or minimally configured spillways, including a specific demand to raise "
+            "the spillways at Ratle by 20 metres."
+        ),
+        "pakistans_strategic_concern": (
+            "Pakistan argues that low-level gated spillways would allow an upstream operator to rapidly draw down a "
+            "reservoir, which it characterizes as giving India strategic control over downstream river levels."
+        ),
+    },
+    "Intake Submergence Levels": {
+        "what_it_is": "The intake structure funnels river water into underground tunnels to turn power turbines; how deep it sits in the reservoir affects operating flexibility at low reservoir levels.",
+        "the_dispute": (
+            "Pakistan contends India's water intakes are set too low, and has formally requested that the power "
+            "intakes be raised — by 1.4 metres at Kishenganga and by up to 8.8 metres at Ratle."
+        ),
+        "pakistans_strategic_concern": (
+            "Pakistan argues that deep intakes let a dam keep generating and drawing water even when the reservoir "
+            "is drawn down to extreme lows, which it characterizes as maximizing India's operational flexibility at "
+            "the expense of consistent downstream flow."
+        ),
+    },
+    "Freeboard Heights": {
+        "what_it_is": "Freeboard is the vertical margin between maximum reservoir water level and the top of the dam wall, a safety buffer against overtopping.",
+        "the_dispute": (
+            "At Ratle, India's design reportedly specifies a 2-metre freeboard; Pakistan maintains a 1-metre "
+            "freeboard would be hydro-meteorologically sufficient."
+        ),
+        "pakistans_strategic_concern": (
+            "Pakistan characterizes the larger freeboard as a provision that could allow more water to be held than "
+            "officially declared under the 'run-of-river' classification."
+        ),
+    },
+    "framing_note": (
+        "Pakistan's position is that India's engineering designs at Kishenganga (Jhelum basin) and Ratle (Chenab "
+        "basin) exceed the 'run-of-river' permissions set out in the Indus Waters Treaty, and amounts to what "
+        "Pakistani officials have called 'imagined capacity' granting structural control over transboundary flows. "
+        "India disputes this characterization; its position on the specific figures above is not itself detailed "
+        "in the available record used for this dashboard."
+    ),
+}
+
+NEUTRAL_EXPERT_TIMELINE = [
+    {"date": "Nov 2026", "milestone": "Synthesis Memorandum distributed", "detail": "The World Bank-appointed Neutral Expert (Michel Lino), acting under the treaty's Annexure F technical-review track, distributes a synthesis memorandum to both parties."},
+    {"date": "Feb 2027", "milestone": "7th meeting & final hydraulic modeling exercise", "detail": "Concluding technical meeting and final hydraulic modeling work ahead of a draft determination."},
+    {"date": "Mar 2027", "milestone": "Circulation of the draft technical decision", "detail": "The Neutral Expert circulates a draft of his technical decision to both governments."},
+    {"date": "Jul 2027", "milestone": "Issuance of the final, legally binding determination", "detail": "The Neutral Expert's determination becomes final and binding under the treaty's technical-dispute provisions (Annexure F)."},
+]
+
+COA_CONCRETE_FREEZE_AND_DEFIANCE = {
+    "The Concrete Freeze (31 Aug 2026)": (
+        "The Court of Arbitration issued an interim enforcement order prohibiting India from pouring concrete on "
+        "Ratle's dam wall and power-intake structures above specified elevations, intended to prevent irreversible "
+        "construction facts on the ground. Pakistan states this freeze remains in effect until 90 days after the "
+        "Neutral Expert delivers his final decision — effectively, on the Jul 2027 Neutral Expert timeline above, "
+        "extending into October 2027."
+    ),
+    "The Engineering Risk Pakistan Raises": (
+        "Pakistan's position is that if the Neutral Expert rules in July 2027 that India's pondage or spillway "
+        "designs violate the treaty, India would be structurally forced to alter already-built designs — and that "
+        "modifying or removing heavily reinforced concrete after it is poured would be a major engineering and "
+        "financial undertaking."
+    ),
+    "India's Reported Position": (
+        "India has characterized the Court of Arbitration as, in its view, not legally constituted, and has "
+        "publicly stated it does not consider itself bound by the Court's construction-freeze order. India's "
+        "Ministry of Environment, Forest and Climate Change reportedly extended the environmental clearance for "
+        "the Ratle project through 2030, consistent with India's stated position that it will continue "
+        "construction on its own domestic timeline rather than the Court's."
+    ),
+    "framing_note": (
+        "This is a live, two-sided procedural dispute: Pakistan treats the Court's order as binding and treats "
+        "India's stated non-compliance as defiance of a valid international ruling; India treats the Neutral "
+        "Expert track as the legitimate forum and disputes the Court's authority to issue the order at all. Both "
+        "positions are reported here as stated by each side, not adjudicated by this dashboard."
+    ),
+}
+
+# ---------------------------------------------------------------------------
+# 19. INDUS WATERS TREATY MAP — REFERENCE (official "Link Canals & Barrage" map)
+# ---------------------------------------------------------------------------
+# Feature list transcribed from WAPDA's "Indus Water Treaty (Link Canals &
+# Barrage)" reference map — used as a cross-check against this dashboard's
+# own LINK_CANALS / DAMS_BARRAGES / RIVERS data, not a replacement for them.
+IWT_MAP_REFERENCE = {
+    "title": "Indus Water Treaty (Link Canals & Barrage)",
+    "link_canals_shown": [
+        "1. Chashma–Jhelum", "2. Rasool–Qadirabad", "3. Qadirabad–Balloki",
+        "4. Balloki–Sulemanki", "5. Trimmu–Sidhnai", "6. Sidhnai–Melsi–Bahawalpur",
+        "7. Taunsa–Panjnad",
+    ],
+    "barrages_shown": [
+        "Rasool Barrage", "Marala Barrage", "Chashma Barrage", "Qadirabad Barrage",
+        "Balloki Barrage", "Sidhnai Barrage", "Taunsa Barrage", "Panjnad Barrage",
+        "Melsi (headworks)", "Sulemanki Barrage",
+    ],
+    "rivers_shown": [
+        "Indus River", "Jhelum River", "Chenab River", "Ravi River", "Sutlej River",
+        "Kabul River", "Swat River", "Kurram River", "Gomal River", "Hingol River",
+        "Hub River", "Dasht River",
+    ],
+    "other_features_shown": [
+        "Line of Control (Azad Jammu & Kashmir / Indian-administered Kashmir boundary)",
+        "Working Boundary (Punjab / Indian Punjab)",
+        "Churna Island (Arabian Sea, off Karachi)",
+    ],
+    "source_note": "WAPDA — 'Indus Water Treaty (Link Canals & Barrage)' reference map.",
+}
+
+# ---------------------------------------------------------------------------
+# 20. RIVER CONFLUENCES (detailed) — grouped by region
+# ---------------------------------------------------------------------------
+RIVER_CONFLUENCES = {
+    "A": {
+        "group_title": "The Punjab Plain (The Confluence of the Five Rivers)",
+        "intro": (
+            "The word 'Punjab' literally means 'Five Waters,' named after its primary "
+            "rivers which successively merge before joining the mighty Indus."
+        ),
+        "confluences": [
+            {
+                "name": "Trimmu Confluence (Jhelum & Chenab)",
+                "description": (
+                    "Located near Jhang, the Jhelum River joins the Chenab River at the "
+                    "Trimmu Barrage. From this point onwards, the merged stream flows as "
+                    "the Chenab River."
+                ),
+            },
+            {
+                "name": "Ahmedpur Sial Confluence (Ravi & Chenab)",
+                "description": (
+                    "Moving further south, the Ravi River empties into the Chenab River "
+                    "near Ahmedpur Sial/Sidhnai."
+                ),
+            },
+            {
+                "name": "Uch Sharif / Panjnad Confluence (Sutlej & Chenab)",
+                "description": (
+                    "Near Uch Sharif in the Bahawalpur District, the Sutlej River merges "
+                    "with the Chenab River. This final merger of the eastern tributaries "
+                    "forms the Panjnad River (literally meaning five rivers)."
+                ),
+            },
+            {
+                "name": "Mithankot Confluence (Panjnad & Indus)",
+                "description": (
+                    "The combined waters of the Panjnad River flow southwest for about 45 "
+                    "miles before dumping entirely into the Indus River at Mithankot."
+                ),
+            },
+        ],
+    },
+    "B": {
+        "group_title": "The Western and Northern Tributaries (Feeding the Indus)",
+        "intro": (
+            "As the Indus River journeys from the northern glaciers down through the "
+            "provinces, it receives multiple right-bank and northern mountain tributaries."
+        ),
+        "confluences": [
+            {
+                "name": "Attock Confluence (Kabul & Indus)",
+                "description": (
+                    "Located at the Punjab-Khyber Pakhtunkhwa border near Attock Fort, the "
+                    "Kabul River (carrying brown, sediment-rich water from Afghanistan) "
+                    "merges into the Indus River (which brings icy-blue water from Tibet). "
+                    "This creates a visually stunning contrast where the two colors run "
+                    "side-by-side before mixing."
+                ),
+            },
+            {
+                "name": "Jaglot / Bunji Confluence (Gilgit & Indus)",
+                "description": (
+                    "Located in Gilgit-Baltistan, this is a geographically profound spot "
+                    "where the Gilgit River joins the Indus. It is also the unique point "
+                    "where three of the world's highest mountain ranges — the Himalayas, "
+                    "Karakoram, and Hindu Kush — meet."
+                ),
+            },
+            {
+                "name": "Muzaffarabad Confluence (Neelum & Jhelum)",
+                "description": (
+                    "In Azad Jammu & Kashmir, the blue-green Neelum River (historically "
+                    "Kishanganga) merges as the largest tributary into the Jhelum River "
+                    "right at Muzaffarabad."
+                ),
+            },
+        ],
+    },
+    "C": {
+        "group_title": "Smaller Mountain & Local Confluences",
+        "intro": "",
+        "confluences": [
+            {
+                "name": "Swat & Kabul River Confluence",
+                "description": (
+                    "The Swat River flows down from Kalam and enters the Kabul River in "
+                    "the Peshawar Valley before the Kabul River ever reaches the Indus."
+                ),
+            },
+            {
+                "name": "Shyok & Indus River Confluence",
+                "description": (
+                    "In the high-altitude region of Baltistan, the Shyok River flows from "
+                    "the eastern Karakoram range to join the Indus River."
+                ),
+            },
+            {
+                "name": "Hunza & Gilgit River Confluence",
+                "description": (
+                    "The Hunza River merges into the Gilgit River near Gilgit town before "
+                    "the combined waters meet the Indus."
+                ),
+            },
+        ],
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 21. IWT TREATY — PERMANENCE, DISPUTE RESOLUTION & THE 2023-2025 STANDOFF
+# ---------------------------------------------------------------------------
+# Content summarized from infographic reference material supplied for this
+# project; the 2023 modification notice and the 2025 "held in abeyance"
+# standoff are presented as reported diplomatic actions/positions, not as
+# adjudicated legal fact — the treaty's legal status during this standoff is
+# itself contested between the two governments.
+IWT_TREATY_INFOGRAPHIC = {
+    "The IWT Treaty": {
+        "summary": "Permanence vs. reality — the treaty's no-expiry clause and the 2023-2025 standoff.",
+        "points": [
+            "Article XII(3) makes the Indus Waters Treaty permanent — it carries no expiry date; the treaty text itself provides no unilateral exit.",
+            "2023: India sent Pakistan a formal notice seeking modification of the treaty.",
+            "2023-24 (reported): Pakistan declined the modification request and sought recourse through international arbiters, including the World Bank-linked Court of Arbitration.",
+            "2025 (reported): India has held the treaty 'in abeyance' — a unilateral suspension not provided for in the treaty's own text, which requires mutual agreement (Article XII(3)) for any modification.",
+            "The legal standoff continues as of late 2025, with each side describing the treaty's current status differently.",
+        ],
+        "source_note": "Based on Article XII of the Indus Waters Treaty (1960) and reported diplomatic actions; summarized from infographic reference material.",
+    },
+    "Article XII(3) Modification by Consent": {
+        "summary": "What the treaty text actually requires to change its terms.",
+        "points": [
+            "Article XII(3): the treaty 'may from time to time be modified by a duly ratified treaty concluded for that purpose between the two Governments.'",
+            "Both governments must agree and ratify any modification — mutual agreement and cooperation are the treaty's only stated mechanism for change.",
+            "This is the clause India's 2023 notice invoked to seek modification, and the clause Pakistan's position holds was not satisfied before India's 2025 suspension.",
+        ],
+        "source_note": "Text of Article XII(3), Indus Waters Treaty (1960).",
+    },
+    "Impact on Transboundary Water Cooperation": {
+        "summary": "Before 2025 vs. April 2025 — what stopped moving between the two countries.",
+        "points": [
+            "Before 2025: river-flow data, rainfall data, flood forecasts and dam-release schedules were routinely exchanged between India and Pakistan under the treaty's data-sharing provisions (Article VII).",
+            "April 2025 (reported): that exchange stopped — no river-flow data, no rainfall data, no flood forecasts, no dam-release schedules.",
+            "Reported consequences: reduced flood-risk warning capacity for downstream Pakistan, and blocked monsoon-season forecasting that depended on upstream data.",
+        ],
+        "source_note": "Reported impact of the 2025 suspension of Article VII data-exchange obligations; summarized from infographic reference material.",
+    },
+    "1960 Dam Design": {
+        "summary": "How the treaty's 1960-era storage limits compare with modern dam engineering on the western rivers.",
+        "points": [
+            "1960 design assumption: a small run-of-the-river weir with minimal pondage — water level in approximately equals water level out, no gated spillways or variable controls, negligible storage beyond the structure itself.",
+            "Modern design (as Pakistan describes recent upstream projects): a large, gated dam with a variably-managed pondage zone (live storage) above the intake, a permanently defined dead storage zone below it, multi-gate radial spillways for active flood control, and a freeboard safety margin.",
+            "The contested zone: the gap between the Annexure D storage limit and the modern dam's actual intake level — Pakistan's position is that this zone represents storage capacity beyond what Annexure D permits.",
+            "This dam-design comparison underlies the same pondage, freeboard, spillway and intake-submergence technical disputes already detailed on the Chenab Projects page (Kishenganga/Ratle).",
+        ],
+        "source_note": "Annexure D of the Indus Waters Treaty (1960); Pakistan's reported technical position on upstream dam design; summarized from infographic reference material.",
+    },
+    "Western Rivers Pakistan": {
+        "summary": "What India may use the western rivers (Indus, Jhelum, Chenab) for under the treaty.",
+        "points": [
+            "Domestic use — as per customary local needs.",
+            "Non-consumptive use — water is not consumed in the process (e.g. hydropower generation that returns flow downstream).",
+            "Limited agriculture — using existing pre-1960 irrigation lines only.",
+            "Run-of-river hydropower — subject to the storage (pondage) limits set out in Annexure D.",
+        ],
+        "source_note": "Articles III and IV and Annexure C/D, Indus Waters Treaty (1960).",
+    },
+    "IWT Main points": {
+        "summary": "A six-point summary of the treaty's core structure.",
+        "points": [
+            "1. River Allocation — unrestricted use of the eastern rivers (Ravi, Beas, Sutlej) for India; the western rivers (Indus, Jhelum, Chenab) are the primary supply for Pakistan.",
+            "2. Permitted Uses — India's use of the western rivers is limited to four categories (domestic, non-consumptive, limited agriculture, run-of-river hydropower) — see 'Western Rivers Pakistan' above.",
+            "3. Storage Restrictions — Annexure D sets pondage (live storage) limits that have applied since 1960.",
+            "4. Data Sharing — Article VII's river-flow and operational data-exchange obligations, reported suspended in 2025 — see 'Impact on Transboundary Water Cooperation' above.",
+            "5. Dispute Resolution — a three-tier mechanism: the Permanent Indus Commission (one commissioner per side, meeting annually, handling technical differences — 116 meetings since 1960) → if unresolved, a Neutral Expert (World Bank-appointed, scoped to Annexure F engineering questions only, as used for Baglihar in 2007) → if still unresolved, the seven-member Court of Arbitration (Annexure G, treaty-interpretation questions, as invoked for Kishenganga in 2013).",
+            "6. Permanence Clause — no expiry date; modification requires mutual agreement and ratification by both governments (Article XII(3)).",
+        ],
+        "source_note": "Indus Waters Treaty (1960), Articles III, IV, VII, IX, XII and Annexures D, F, G; summarized from infographic reference material.",
+    },
+}

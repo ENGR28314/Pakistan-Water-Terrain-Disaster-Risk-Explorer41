@@ -1,0 +1,3 @@
+# Optional: only needed for the CrewAI crew on the 🤖 CrewAI Sector Agents page.
+# The built-in agents and all charts work without it.
+crewai

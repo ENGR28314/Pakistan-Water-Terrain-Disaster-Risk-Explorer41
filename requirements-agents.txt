@@ -1,0 +1,4 @@
+# Optional: only needed for the CrewAI + LLM mode of the AI Agents page.
+# The rule-based agents work without this file.
+# CrewAI needs Python 3.10-3.13 and your own LLM API key (OpenAI / Anthropic / Gemini ...).
+crewai
